@@ -16,7 +16,25 @@ interface BattleData {
 }
 
 /**
- * Battle Scene - Cena principal de batalha
+ * Cores do tema medieval
+ */
+const MEDIEVAL_THEME = {
+    gold: 0xd4af37,
+    darkGold: 0x8b7355,
+    parchment: 0xf4e4bc,
+    darkParchment: 0xc9b896,
+    leather: 0x8b4513,
+    darkLeather: 0x5c3317,
+    blood: 0x8b0000,
+    healthGreen: 0x228b22,
+    manaBlue: 0x4169e1,
+    wood: 0x654321,
+    iron: 0x71797e,
+    shadow: 0x1a1a1a
+};
+
+/**
+ * Battle Scene - Cena principal de batalha com tema medieval
  */
 export class Battle extends Scene {
     private arena!: Arena;
@@ -58,19 +76,22 @@ export class Battle extends Scene {
         this.arena = new Arena();
         this.arena.iniciarBatalha(this.jogador, this.oponente);
 
-        // Fundo
+        // Fundo com imagem throne room
         this.createBackground();
 
-        // UI de status
-        this.createStatusBars();
+        // Indicador de turno (topo)
+        this.createTurnIndicator();
 
-        // Área de log
-        this.createLogArea();
+        // UI de status dos personagens
+        this.createStatusPanels();
 
         // Personagens visuais
         this.createCharacterVisuals();
 
-        // Área de ações (ataques e cartas)
+        // Área de log (pergaminho)
+        this.createLogArea();
+
+        // Área de ações (ataques e cartas) - painel inferior
         this.createActionArea();
 
         // Iniciar primeiro turno
@@ -78,246 +99,407 @@ export class Battle extends Scene {
     }
 
     private createBackground(): void {
-        const graphics = this.add.graphics();
-        graphics.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x0f0f23, 0x0f0f23, 1);
-        graphics.fillRect(0, 0, 1024, 768);
-
-        // Arena floor
-        graphics.fillStyle(0x2a2a4a, 0.5);
-        graphics.fillEllipse(512, 400, 800, 200);
+        // Imagem de fundo throne room
+        const bg = this.add.image(512, 384, 'throne-room');
+        bg.setDisplaySize(1024, 768);
+        
+        // Overlay escuro para melhor contraste da UI
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.3);
+        overlay.fillRect(0, 0, 1024, 768);
     }
 
-    private createStatusBars(): void {
-        // === JOGADOR (esquerda inferior) ===
-        this.add.container(50, 500);
+    private createTurnIndicator(): void {
+        // Banner medieval para indicador de turno
+        const bannerContainer = this.add.container(512, 45);
+
+        // Fundo do banner
+        const banner = this.add.graphics();
+        banner.fillStyle(MEDIEVAL_THEME.leather, 0.95);
+        banner.fillRoundedRect(-180, -35, 360, 70, 8);
+        banner.lineStyle(4, MEDIEVAL_THEME.gold, 1);
+        banner.strokeRoundedRect(-180, -35, 360, 70, 8);
+        
+        // Decorações douradas
+        banner.lineStyle(2, MEDIEVAL_THEME.darkGold, 1);
+        banner.strokeRoundedRect(-170, -25, 340, 50, 5);
+
+        this.turnoText = this.add.text(0, 0, '⚔️ TURNO 1 ⚔️', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '28px',
+            color: '#d4af37',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
+        bannerContainer.add([banner, this.turnoText]);
+    }
+
+    private createStatusPanels(): void {
+        // === PAINEL DO JOGADOR (esquerda) ===
+        this.createPlayerPanel();
+        
+        // === PAINEL DO OPONENTE (direita) ===
+        this.createOpponentPanel();
+    }
+
+    private createPlayerPanel(): void {
+        const panelX = 20;
+        const panelY = 100;
+        const panelWidth = 280;
+        const panelHeight = 140;
+
+        // Container do painel
+        const panel = this.add.container(panelX, panelY);
+
+        // Fundo estilo pergaminho/couro
+        const bg = this.add.graphics();
+        bg.fillStyle(MEDIEVAL_THEME.leather, 0.9);
+        bg.fillRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(3, MEDIEVAL_THEME.gold, 1);
+        bg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.7);
+        bg.strokeRoundedRect(8, 8, panelWidth - 16, panelHeight - 16, 6);
 
         // Nome do jogador
-        this.add.text(50, 470, `${this.jogador.nome} (${this.jogador.classe})`, {
-            fontFamily: 'Arial Black',
+        const nameText = this.add.text(panelWidth / 2, 25, `⚔️ ${this.jogador.nome}`, {
+            fontFamily: 'Georgia, serif',
             fontSize: '18px',
-            color: '#' + this.jogadorCor.toString(16).padStart(6, '0')
-        });
-
-        // Barra de vida do jogador
-        this.jogadorHealthBar = this.add.graphics();
-        this.jogadorHealthText = this.add.text(250, 500, '', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#ffffff'
-        });
-
-        // Barra de mana do jogador
-        this.jogadorManaBar = this.add.graphics();
-        this.jogadorManaText = this.add.text(250, 525, '', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#ffffff'
-        });
-
-        // === OPONENTE (direita superior) ===
-        this.add.text(974, 80, `${this.oponente.nome} (${this.oponente.classe})`, {
-            fontFamily: 'Arial Black',
-            fontSize: '18px',
-            color: '#' + this.oponenteCor.toString(16).padStart(6, '0')
-        }).setOrigin(1, 0);
-
-        // Barra de vida do oponente
-        this.oponenteHealthBar = this.add.graphics();
-        this.oponenteHealthText = this.add.text(974, 110, '', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#ffffff'
-        }).setOrigin(1, 0);
-
-        // Barra de mana do oponente
-        this.oponenteManaBar = this.add.graphics();
-        this.oponenteManaText = this.add.text(974, 135, '', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#ffffff'
-        }).setOrigin(1, 0);
-
-        // Indicador de turno
-        this.turnoText = this.add.text(512, 30, 'Turno 1', {
-            fontFamily: 'Arial Black',
-            fontSize: '24px',
-            color: '#e94560'
+            color: '#' + this.jogadorCor.toString(16).padStart(6, '0'),
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
+
+        // Classe
+        const classeText = this.add.text(panelWidth / 2, 48, this.jogador.classe, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '14px',
+            color: '#f4e4bc'
+        }).setOrigin(0.5);
+
+        panel.add([bg, nameText, classeText]);
+
+        // Barras de vida e mana
+        this.jogadorHealthBar = this.add.graphics();
+        this.jogadorManaBar = this.add.graphics();
+        
+        this.jogadorHealthText = this.add.text(panelX + panelWidth - 10, panelY + 75, '', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(1, 0.5);
+
+        this.jogadorManaText = this.add.text(panelX + panelWidth - 10, panelY + 105, '', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(1, 0.5);
+    }
+
+    private createOpponentPanel(): void {
+        const panelX = 724;
+        const panelY = 100;
+        const panelWidth = 280;
+        const panelHeight = 140;
+
+        // Container do painel
+        const panel = this.add.container(panelX, panelY);
+
+        // Fundo estilo pergaminho/couro
+        const bg = this.add.graphics();
+        bg.fillStyle(MEDIEVAL_THEME.darkLeather, 0.9);
+        bg.fillRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(3, MEDIEVAL_THEME.blood, 1);
+        bg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(2, MEDIEVAL_THEME.iron, 0.7);
+        bg.strokeRoundedRect(8, 8, panelWidth - 16, panelHeight - 16, 6);
+
+        // Nome do oponente
+        const nameText = this.add.text(panelWidth / 2, 25, `💀 ${this.oponente.nome}`, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '18px',
+            color: '#' + this.oponenteCor.toString(16).padStart(6, '0'),
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        // Classe
+        const classeText = this.add.text(panelWidth / 2, 48, this.oponente.classe, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '14px',
+            color: '#ccbbaa'
+        }).setOrigin(0.5);
+
+        panel.add([bg, nameText, classeText]);
+
+        // Barras de vida e mana
+        this.oponenteHealthBar = this.add.graphics();
+        this.oponenteManaBar = this.add.graphics();
+        
+        this.oponenteHealthText = this.add.text(panelX + panelWidth - 10, panelY + 75, '', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(1, 0.5);
+
+        this.oponenteManaText = this.add.text(panelX + panelWidth - 10, panelY + 105, '', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(1, 0.5);
 
         this.updateStatusBars();
     }
 
     private updateStatusBars(): void {
-        // Jogador
-        const jogadorHpPercent = this.jogador.vida / this.jogador.vidaMaxima;
+        const barWidth = 180;
+        const barHeight = 22;
+        
+        // === JOGADOR ===
+        const jogadorHpPercent = Math.max(0, this.jogador.vida / this.jogador.vidaMaxima);
         const jogadorManaPercent = this.jogador.manaMaxima > 0 
-            ? this.jogador.mana / this.jogador.manaMaxima 
+            ? Math.max(0, this.jogador.mana / this.jogador.manaMaxima) 
             : 0;
+
+        const jX = 35;
+        const jHealthY = 165;
+        const jManaY = 195;
 
         this.jogadorHealthBar.clear();
-        this.jogadorHealthBar.fillStyle(0x333333, 1);
-        this.jogadorHealthBar.fillRoundedRect(50, 500, 200, 20, 5);
-        this.jogadorHealthBar.fillStyle(0x22c55e, 1);
-        this.jogadorHealthBar.fillRoundedRect(50, 500, 200 * jogadorHpPercent, 20, 5);
-        this.jogadorHealthText.setText(`${this.jogador.vida}/${this.jogador.vidaMaxima}`);
+        // Fundo da barra
+        this.jogadorHealthBar.fillStyle(0x2a2a2a, 1);
+        this.jogadorHealthBar.fillRoundedRect(jX, jHealthY, barWidth, barHeight, 4);
+        // Borda decorativa
+        this.jogadorHealthBar.lineStyle(2, MEDIEVAL_THEME.gold, 0.8);
+        this.jogadorHealthBar.strokeRoundedRect(jX, jHealthY, barWidth, barHeight, 4);
+        // Barra de vida
+        if (jogadorHpPercent > 0) {
+            this.jogadorHealthBar.fillStyle(MEDIEVAL_THEME.healthGreen, 1);
+            this.jogadorHealthBar.fillRoundedRect(jX + 2, jHealthY + 2, (barWidth - 4) * jogadorHpPercent, barHeight - 4, 3);
+        }
+        // Ícone
+        this.jogadorHealthText.setText(`❤️ ${this.jogador.vida}/${this.jogador.vidaMaxima}`);
 
         this.jogadorManaBar.clear();
-        this.jogadorManaBar.fillStyle(0x333333, 1);
-        this.jogadorManaBar.fillRoundedRect(50, 525, 200, 15, 5);
+        this.jogadorManaBar.fillStyle(0x2a2a2a, 1);
+        this.jogadorManaBar.fillRoundedRect(jX, jManaY, barWidth, barHeight - 4, 4);
+        this.jogadorManaBar.lineStyle(2, MEDIEVAL_THEME.gold, 0.8);
+        this.jogadorManaBar.strokeRoundedRect(jX, jManaY, barWidth, barHeight - 4, 4);
+        
         if (this.jogador.manaMaxima > 0) {
-            this.jogadorManaBar.fillStyle(0x3b82f6, 1);
-            this.jogadorManaBar.fillRoundedRect(50, 525, 200 * jogadorManaPercent, 15, 5);
-            this.jogadorManaText.setText(`${this.jogador.mana}/${this.jogador.manaMaxima}`);
+            if (jogadorManaPercent > 0) {
+                this.jogadorManaBar.fillStyle(MEDIEVAL_THEME.manaBlue, 1);
+                this.jogadorManaBar.fillRoundedRect(jX + 2, jManaY + 2, (barWidth - 4) * jogadorManaPercent, barHeight - 8, 3);
+            }
+            this.jogadorManaText.setText(`💧 ${this.jogador.mana}/${this.jogador.manaMaxima}`);
         } else {
-            this.jogadorManaText.setText('Sem Mana');
+            this.jogadorManaText.setText('⚔️ Fúria');
         }
 
-        // Oponente
-        const oponenteHpPercent = this.oponente.vida / this.oponente.vidaMaxima;
+        // === OPONENTE ===
+        const oponenteHpPercent = Math.max(0, this.oponente.vida / this.oponente.vidaMaxima);
         const oponenteManaPercent = this.oponente.manaMaxima > 0 
-            ? this.oponente.mana / this.oponente.manaMaxima 
+            ? Math.max(0, this.oponente.mana / this.oponente.manaMaxima) 
             : 0;
 
+        const oX = 739;
+        const oHealthY = 165;
+        const oManaY = 195;
+
         this.oponenteHealthBar.clear();
-        this.oponenteHealthBar.fillStyle(0x333333, 1);
-        this.oponenteHealthBar.fillRoundedRect(774, 110, 200, 20, 5);
-        this.oponenteHealthBar.fillStyle(0xef4444, 1);
-        this.oponenteHealthBar.fillRoundedRect(774, 110, 200 * oponenteHpPercent, 20, 5);
-        this.oponenteHealthText.setText(`${this.oponente.vida}/${this.oponente.vidaMaxima}`);
+        this.oponenteHealthBar.fillStyle(0x2a2a2a, 1);
+        this.oponenteHealthBar.fillRoundedRect(oX, oHealthY, barWidth, barHeight, 4);
+        this.oponenteHealthBar.lineStyle(2, MEDIEVAL_THEME.blood, 0.8);
+        this.oponenteHealthBar.strokeRoundedRect(oX, oHealthY, barWidth, barHeight, 4);
+        if (oponenteHpPercent > 0) {
+            this.oponenteHealthBar.fillStyle(0xdc2626, 1);
+            this.oponenteHealthBar.fillRoundedRect(oX + 2, oHealthY + 2, (barWidth - 4) * oponenteHpPercent, barHeight - 4, 3);
+        }
+        this.oponenteHealthText.setText(`❤️ ${this.oponente.vida}/${this.oponente.vidaMaxima}`);
 
         this.oponenteManaBar.clear();
-        this.oponenteManaBar.fillStyle(0x333333, 1);
-        this.oponenteManaBar.fillRoundedRect(774, 135, 200, 15, 5);
+        this.oponenteManaBar.fillStyle(0x2a2a2a, 1);
+        this.oponenteManaBar.fillRoundedRect(oX, oManaY, barWidth, barHeight - 4, 4);
+        this.oponenteManaBar.lineStyle(2, MEDIEVAL_THEME.blood, 0.8);
+        this.oponenteManaBar.strokeRoundedRect(oX, oManaY, barWidth, barHeight - 4, 4);
+        
         if (this.oponente.manaMaxima > 0) {
-            this.oponenteManaBar.fillStyle(0x3b82f6, 1);
-            this.oponenteManaBar.fillRoundedRect(774, 135, 200 * oponenteManaPercent, 15, 5);
-            this.oponenteManaText.setText(`${this.oponente.mana}/${this.oponente.manaMaxima}`);
+            if (oponenteManaPercent > 0) {
+                this.oponenteManaBar.fillStyle(MEDIEVAL_THEME.manaBlue, 1);
+                this.oponenteManaBar.fillRoundedRect(oX + 2, oManaY + 2, (barWidth - 4) * oponenteManaPercent, barHeight - 8, 3);
+            }
+            this.oponenteManaText.setText(`💧 ${this.oponente.mana}/${this.oponente.manaMaxima}`);
         } else {
-            this.oponenteManaText.setText('Sem Mana');
+            this.oponenteManaText.setText('⚔️ Fúria');
         }
 
-        // Turno
-        this.turnoText.setText(`Turno ${this.arena.turnoAtual}`);
+        // Atualizar turno
+        const turnOwner = this.isPlayerTurn ? 'SEU TURNO' : 'TURNO INIMIGO';
+        this.turnoText.setText(`⚔️ ${turnOwner} - TURNO ${this.arena.turnoAtual} ⚔️`);
+    }
+
+    private createCharacterVisuals(): void {
+        // === JOGADOR (esquerda) ===
+        const jogadorContainer = this.add.container(200, 380);
+
+        // Círculo de base (sombra)
+        const jogadorShadow = this.add.ellipse(0, 60, 100, 30, 0x000000, 0.5);
+        
+        // Avatar do jogador
+        const jogadorBg = this.add.graphics();
+        jogadorBg.fillStyle(this.jogadorCor, 1);
+        jogadorBg.fillCircle(0, 0, 55);
+        jogadorBg.lineStyle(4, MEDIEVAL_THEME.gold, 1);
+        jogadorBg.strokeCircle(0, 0, 55);
+        jogadorBg.lineStyle(2, 0xffffff, 0.3);
+        jogadorBg.strokeCircle(0, 0, 50);
+
+        const jogadorLetra = this.add.text(0, 0, this.jogador.classe.charAt(0), {
+            fontFamily: 'Georgia, serif',
+            fontSize: '48px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        jogadorContainer.add([jogadorShadow, jogadorBg, jogadorLetra]);
+
+        // === OPONENTE (direita) ===
+        const oponenteContainer = this.add.container(824, 300);
+
+        // Círculo de base (sombra)
+        const oponenteShadow = this.add.ellipse(0, 60, 100, 30, 0x000000, 0.5);
+
+        // Avatar do oponente
+        const oponenteBg = this.add.graphics();
+        oponenteBg.fillStyle(this.oponenteCor, 1);
+        oponenteBg.fillCircle(0, 0, 55);
+        oponenteBg.lineStyle(4, MEDIEVAL_THEME.blood, 1);
+        oponenteBg.strokeCircle(0, 0, 55);
+        oponenteBg.lineStyle(2, 0x000000, 0.5);
+        oponenteBg.strokeCircle(0, 0, 50);
+
+        const oponenteLetra = this.add.text(0, 0, this.oponente.classe.charAt(0), {
+            fontFamily: 'Georgia, serif',
+            fontSize: '48px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        oponenteContainer.add([oponenteShadow, oponenteBg, oponenteLetra]);
     }
 
     private createLogArea(): void {
-        // Área de log no centro-direita
-        this.logContainer = this.add.container(750, 200);
+        // Pergaminho de histórico (centro superior)
+        this.logContainer = this.add.container(320, 100);
 
+        // Fundo estilo pergaminho
         const logBg = this.add.graphics();
-        logBg.fillStyle(0x1a1a2e, 0.9);
-        logBg.fillRoundedRect(0, 0, 260, 200, 10);
-        logBg.lineStyle(2, 0xe94560, 0.5);
-        logBg.strokeRoundedRect(0, 0, 260, 200, 10);
+        logBg.fillStyle(MEDIEVAL_THEME.parchment, 0.9);
+        logBg.fillRoundedRect(0, 0, 380, 150, 8);
+        logBg.lineStyle(3, MEDIEVAL_THEME.leather, 1);
+        logBg.strokeRoundedRect(0, 0, 380, 150, 8);
+        logBg.lineStyle(1, MEDIEVAL_THEME.darkParchment, 0.8);
+        logBg.strokeRoundedRect(8, 8, 364, 134, 5);
 
-        const logTitle = this.add.text(130, 15, 'Histórico', {
-            fontFamily: 'Arial Black',
+        // Título
+        const logTitle = this.add.text(190, 18, '📜 Crônicas da Batalha', {
+            fontFamily: 'Georgia, serif',
             fontSize: '16px',
-            color: '#e94560'
+            color: '#5c3317',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
 
         this.logContainer.add([logBg, logTitle]);
     }
 
     private addLog(message: string): void {
-        // Adicionar nova mensagem
+        const maxLogs = 5;
         
-        if (this.logTexts.length >= 7) {
-            // Remover mensagem mais antiga
+        if (this.logTexts.length >= maxLogs) {
             const oldText = this.logTexts.shift();
             oldText?.destroy();
             
-            // Mover mensagens para cima
             this.logTexts.forEach((text, index) => {
-                text.y = 40 + (index * 20);
+                text.y = 40 + (index * 22);
             });
         }
 
-        const newLog = this.add.text(10, this.logTexts.length * 20 + 40, message, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#cccccc',
-            wordWrap: { width: 240 }
+        const newLog = this.add.text(15, this.logTexts.length * 22 + 40, `• ${message}`, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '12px',
+            color: '#3d2914',
+            wordWrap: { width: 350 }
         });
 
         this.logTexts.push(newLog);
         this.logContainer.add(newLog);
     }
 
-    private createCharacterVisuals(): void {
-        // Jogador (esquerda)
-        const jogadorVisual = this.add.graphics();
-        jogadorVisual.fillStyle(this.jogadorCor, 1);
-        jogadorVisual.fillCircle(250, 350, 50);
-        jogadorVisual.lineStyle(4, 0xffffff, 0.5);
-        jogadorVisual.strokeCircle(250, 350, 50);
-
-        this.add.text(250, 350, this.jogador.classe.charAt(0), {
-            fontFamily: 'Arial Black',
-            fontSize: '40px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-
-        // Oponente (direita)
-        const oponenteVisual = this.add.graphics();
-        oponenteVisual.fillStyle(this.oponenteCor, 1);
-        oponenteVisual.fillCircle(774, 250, 50);
-        oponenteVisual.lineStyle(4, 0xffffff, 0.5);
-        oponenteVisual.strokeCircle(774, 250, 50);
-
-        this.add.text(774, 250, this.oponente.classe.charAt(0), {
-            fontFamily: 'Arial Black',
-            fontSize: '40px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-
-        // HP acima do oponente
-        this.add.text(774, 180, `❤️ ${this.oponente.vida}`, {
-            fontFamily: 'Arial Black',
-            fontSize: '20px',
-            color: '#ef4444'
-        }).setOrigin(0.5);
-    }
-
     private createActionArea(): void {
-        // Container principal de ações (parte inferior)
-        this.actionContainer = this.add.container(0, 580);
+        // Painel inferior principal
+        this.actionContainer = this.add.container(0, 520);
 
-        // Fundo da área de ações
+        // Fundo estilo madeira/couro
         const actionBg = this.add.graphics();
-        actionBg.fillStyle(0x1a1a2e, 0.95);
-        actionBg.fillRoundedRect(50, 0, 924, 170, 15);
-        actionBg.lineStyle(2, 0xe94560, 0.5);
-        actionBg.strokeRoundedRect(50, 0, 924, 170, 15);
+        actionBg.fillStyle(MEDIEVAL_THEME.leather, 0.95);
+        actionBg.fillRoundedRect(15, 0, 994, 240, 12);
+        actionBg.lineStyle(4, MEDIEVAL_THEME.gold, 1);
+        actionBg.strokeRoundedRect(15, 0, 994, 240, 12);
+        actionBg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.6);
+        actionBg.strokeRoundedRect(25, 10, 974, 220, 8);
         this.actionContainer.add(actionBg);
 
-        // Título "Ataques"
-        const ataquesTitle = this.add.text(170, 15, 'Ataques', {
-            fontFamily: 'Arial Black',
-            fontSize: '16px',
-            color: '#e94560'
+        // Título "Ações de Combate"
+        const ataquesTitle = this.add.text(160, 18, '⚔️ ATAQUES', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '18px',
+            color: '#d4af37',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         this.actionContainer.add(ataquesTitle);
 
         // Título "Cartas"
-        const cartasTitle = this.add.text(680, 15, 'Cartas de Suporte', {
-            fontFamily: 'Arial Black',
-            fontSize: '16px',
-            color: '#e94560'
+        const cartasTitle = this.add.text(660, 18, '🃏 CARTAS DE SUPORTE', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '18px',
+            color: '#d4af37',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         this.actionContainer.add(cartasTitle);
 
-        // Separador
+        // Separador decorativo vertical
         const separator = this.add.graphics();
-        separator.lineStyle(2, 0x444444, 1);
-        separator.lineBetween(380, 10, 380, 160);
+        separator.lineStyle(3, MEDIEVAL_THEME.gold, 0.8);
+        separator.lineBetween(330, 15, 330, 225);
+        separator.fillStyle(MEDIEVAL_THEME.gold, 1);
+        separator.fillCircle(330, 15, 5);
+        separator.fillCircle(330, 225, 5);
         this.actionContainer.add(separator);
 
         // Criar botões de ataque
         this.createAttackButtons();
 
-        // Criar área de cartas
-        this.cardsContainer = this.add.container(400, 40);
+        // Container para cartas - posição mais centralizada
+        this.cardsContainer = this.add.container(350, 45);
         this.actionContainer.add(this.cardsContainer);
         this.updateCards();
     }
@@ -325,7 +507,7 @@ export class Battle extends Scene {
     private createAttackButtons(): void {
         // Ataque 1
         const atk1Btn = this.createActionButton(
-            120, 80, 
+            160, 125, 
             this.jogador.nomeAtaque1, 
             this.jogador.descricaoAtaque1,
             0,
@@ -335,9 +517,9 @@ export class Battle extends Scene {
 
         // Ataque 2
         const custoMana = this.jogador.custoManaAtaque2;
-        const custoText = custoMana > 0 ? ` (${custoMana} mana)` : '';
+        const custoText = custoMana > 0 ? ` (${custoMana} 💧)` : '';
         const atk2Btn = this.createActionButton(
-            280, 80,
+            160, 200,
             this.jogador.nomeAtaque2 + custoText,
             this.jogador.descricaoAtaque2,
             custoMana,
@@ -351,63 +533,74 @@ export class Battle extends Scene {
         y: number, 
         title: string, 
         description: string,
-        _manaCost: number,
+        manaCost: number,
         callback: () => void
     ): GameObjects.Container {
         const container = this.add.container(x, y);
-        const width = 140;
-        const height = 100;
+        const width = 260;
+        const height = 60;
 
-        // Fundo
+        // Verificar se tem mana suficiente
+        const hasEnoughMana = manaCost === 0 || this.jogador.mana >= manaCost;
+
+        // Fundo do botão estilo medieval
         const bg = this.add.graphics();
-        bg.fillStyle(0x2a2a4a, 1);
+        bg.fillStyle(hasEnoughMana ? MEDIEVAL_THEME.darkLeather : 0x3a3a3a, 1);
         bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
-        bg.lineStyle(2, 0xe94560, 1);
+        bg.lineStyle(3, hasEnoughMana ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.iron, 1);
         bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
 
-        // Título
-        const titleText = this.add.text(0, -30, title, {
-            fontFamily: 'Arial Black',
-            fontSize: '11px',
-            color: '#ffffff',
+        // Título do ataque
+        const titleText = this.add.text(0, -12, title, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '14px',
+            color: hasEnoughMana ? '#d4af37' : '#888888',
+            fontStyle: 'bold',
             align: 'center',
-            wordWrap: { width: width - 10 }
+            wordWrap: { width: width - 20 },
+            stroke: '#000000',
+            strokeThickness: 1
         }).setOrigin(0.5);
 
         // Descrição
-        const descText = this.add.text(0, 15, description, {
-            fontFamily: 'Arial',
-            fontSize: '9px',
-            color: '#aaaaaa',
+        const descText = this.add.text(0, 12, description, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '11px',
+            color: hasEnoughMana ? '#f4e4bc' : '#666666',
             align: 'center',
-            wordWrap: { width: width - 15 }
+            wordWrap: { width: width - 25 }
         }).setOrigin(0.5);
 
         container.add([bg, titleText, descText]);
         container.setSize(width, height);
-        container.setInteractive({ useHandCursor: true });
+        
+        if (hasEnoughMana) {
+            container.setInteractive({ useHandCursor: true });
 
-        container.on('pointerover', () => {
-            bg.clear();
-            bg.fillStyle(0x3a3a5a, 1);
-            bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
-            bg.lineStyle(2, 0xff6b8a, 1);
-            bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
-        });
+            container.on('pointerover', () => {
+                bg.clear();
+                bg.fillStyle(MEDIEVAL_THEME.wood, 1);
+                bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
+                bg.lineStyle(3, 0xffd700, 1);
+                bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
+                container.setScale(1.02);
+            });
 
-        container.on('pointerout', () => {
-            bg.clear();
-            bg.fillStyle(0x2a2a4a, 1);
-            bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
-            bg.lineStyle(2, 0xe94560, 1);
-            bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
-        });
+            container.on('pointerout', () => {
+                bg.clear();
+                bg.fillStyle(MEDIEVAL_THEME.darkLeather, 1);
+                bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
+                bg.lineStyle(3, MEDIEVAL_THEME.gold, 1);
+                bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
+                container.setScale(1);
+            });
 
-        container.on('pointerdown', () => {
-            if (!this.isAnimating && this.isPlayerTurn) {
-                callback();
-            }
-        });
+            container.on('pointerdown', () => {
+                if (!this.isAnimating && this.isPlayerTurn) {
+                    callback();
+                }
+            });
+        }
 
         return container;
     }
@@ -416,15 +609,32 @@ export class Battle extends Scene {
         this.cardsContainer.removeAll(true);
 
         const cards = this.jogador.inventario;
-        const cardWidth = 120;
-        const cardHeight = 110;
-        const padding = 10;
+        const cardWidth = 145;
+        const cardHeight = 170;
+        const padding = 15;
+
+        // Centralizar as cartas
+        const totalWidth = cards.length * (cardWidth + padding) - padding;
+        const startX = (640 - totalWidth) / 2;
 
         cards.forEach((card, index) => {
-            const x = index * (cardWidth + padding);
+            const x = startX + index * (cardWidth + padding);
             const cardContainer = this.createCardUI(x, 0, cardWidth, cardHeight, card, index);
             this.cardsContainer.add(cardContainer);
         });
+    }
+
+    private getCardSpriteKey(raridade: string): string {
+        switch (raridade) {
+            case 'Comum': return 'card-gray';
+            case 'Incomum': return 'card-green';
+            case 'Raro': return 'card-blue';
+            case 'Épico': return 'card-yellow';
+            case 'Lendário': return 'card-yellow';
+            case 'Mayhem': return 'card-red';
+            case 'Super Mayhem': return 'card-red';
+            default: return 'card-gray';
+        }
     }
 
     private createCardUI(
@@ -435,71 +645,110 @@ export class Battle extends Scene {
         card: IItem, 
         index: number
     ): GameObjects.Container {
-        const container = this.add.container(x, y);
+        const container = this.add.container(x + width/2, y + height/2);
         const rarityColor = RaridadeCores[card.raridade] || 0x888888;
 
-        // Fundo
-        const bg = this.add.graphics();
-        bg.fillStyle(0x1a1a2e, 1);
-        bg.fillRoundedRect(0, 0, width, height, 8);
-        bg.lineStyle(3, rarityColor, 1);
-        bg.strokeRoundedRect(0, 0, width, height, 8);
+        // Sprite da carta como fundo
+        const spriteKey = this.getCardSpriteKey(card.raridade);
+        const cardSprite = this.add.image(0, 0, spriteKey);
+        cardSprite.setDisplaySize(width, height);
+
+        // Overlay para legibilidade
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.35);
+        overlay.fillRoundedRect(-width/2 + 8, -height/2 + 8, width - 16, height - 16, 6);
+
+        // Borda decorativa
+        const border = this.add.graphics();
+        border.lineStyle(3, rarityColor, 1);
+        border.strokeRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height - 8, 8);
 
         // Raridade (topo)
-        const rarityText = this.add.text(width/2, 10, card.raridade, {
-            fontFamily: 'Arial',
-            fontSize: '8px',
-            color: '#' + rarityColor.toString(16).padStart(6, '0')
+        const rarityText = this.add.text(0, -height/2 + 20, card.raridade.toUpperCase(), {
+            fontFamily: 'Georgia, serif',
+            fontSize: '10px',
+            color: '#' + rarityColor.toString(16).padStart(6, '0'),
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
         }).setOrigin(0.5);
 
-        // Nome
-        const nameText = this.add.text(width/2, 35, card.nome, {
-            fontFamily: 'Arial Black',
-            fontSize: '10px',
+        // Nome da carta
+        const nameText = this.add.text(0, -height/2 + 50, card.nome, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '13px',
             color: '#ffffff',
+            fontStyle: 'bold',
             align: 'center',
-            wordWrap: { width: width - 10 }
+            wordWrap: { width: width - 25 },
+            stroke: '#000000',
+            strokeThickness: 3
         }).setOrigin(0.5);
 
         // Descrição
-        const descText = this.add.text(width/2, 70, card.descricao, {
-            fontFamily: 'Arial',
-            fontSize: '8px',
-            color: '#aaaaaa',
+        const descText = this.add.text(0, 15, card.descricao, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '10px',
+            color: '#f4e4bc',
             align: 'center',
-            wordWrap: { width: width - 10 }
+            wordWrap: { width: width - 25 },
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
 
-        // Indicador Mayhem
+        container.add([cardSprite, overlay, border, rarityText, nameText, descText]);
+
+        // Badge Mayhem especial
         if (card.isMayhem) {
-            const mayhemBadge = this.add.text(width/2, height - 12, '⚡ MAYHEM', {
-                fontFamily: 'Arial Black',
-                fontSize: '8px',
-                color: '#ff0040'
+            const mayhemGlow = this.add.graphics();
+            mayhemGlow.lineStyle(4, 0xff0000, 0.6);
+            mayhemGlow.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+
+            const mayhemBadge = this.add.text(0, height/2 - 22, '⚡ MAYHEM ⚡', {
+                fontFamily: 'Georgia, serif',
+                fontSize: '11px',
+                color: '#ffff00',
+                fontStyle: 'bold',
+                stroke: '#ff0000',
+                strokeThickness: 4
             }).setOrigin(0.5);
-            container.add(mayhemBadge);
+            
+            container.add([mayhemGlow, mayhemBadge]);
+
+            // Animação de brilho
+            this.tweens.add({
+                targets: mayhemGlow,
+                alpha: 0.3,
+                duration: 800,
+                yoyo: true,
+                repeat: -1
+            });
         }
 
-        container.add([bg, rarityText, nameText, descText]);
+        // Área de clique - hitbox precisa
         container.setSize(width, height);
-        container.setInteractive({ useHandCursor: true });
+        container.setInteractive({ 
+            useHandCursor: true,
+            hitArea: new Phaser.Geom.Rectangle(-width/2, -height/2, width, height),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains
+        });
 
         container.on('pointerover', () => {
-            container.y = y - 5;
-            bg.clear();
-            bg.fillStyle(0x2a2a4a, 1);
-            bg.fillRoundedRect(0, 0, width, height, 8);
-            bg.lineStyle(3, 0xffffff, 1);
-            bg.strokeRoundedRect(0, 0, width, height, 8);
+            container.y = y + height/2 - 15;
+            container.setScale(1.1);
+            cardSprite.setTint(0xffffff);
+            border.clear();
+            border.lineStyle(4, 0xffd700, 1);
+            border.strokeRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height - 8, 8);
         });
 
         container.on('pointerout', () => {
-            container.y = y;
-            bg.clear();
-            bg.fillStyle(0x1a1a2e, 1);
-            bg.fillRoundedRect(0, 0, width, height, 8);
-            bg.lineStyle(3, rarityColor, 1);
-            bg.strokeRoundedRect(0, 0, width, height, 8);
+            container.y = y + height/2;
+            container.setScale(1);
+            cardSprite.clearTint();
+            border.clear();
+            border.lineStyle(3, rarityColor, 1);
+            border.strokeRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height - 8, 8);
         });
 
         container.on('pointerdown', () => {
@@ -520,8 +769,8 @@ export class Battle extends Scene {
         this.updateCards();
 
         if (!this.isPlayerTurn && this.arena.batalhaAtiva) {
-            // Turno da CPU
-            this.time.delayedCall(1000, () => this.cpuTurn());
+            // Turno da CPU - delay para feedback visual
+            this.time.delayedCall(1200, () => this.cpuTurn());
         }
     }
 
@@ -545,7 +794,7 @@ export class Battle extends Scene {
         } catch (error) {
             if (error instanceof ManaInsuficienteError) {
                 this.addLog(error.message);
-                this.showMessage('Mana Insuficiente!', 0xff0000);
+                this.showMessage('⚠️ Mana Insuficiente!', 0xff4444);
             }
             this.isAnimating = false;
         }
@@ -559,6 +808,10 @@ export class Battle extends Scene {
         try {
             const result = this.arena.usarCarta(index);
             this.addLog(result);
+            
+            // Efeito visual de uso de carta
+            this.showMessage('🃏 Carta Usada!', MEDIEVAL_THEME.gold);
+            
             this.updateStatusBars();
             this.updateCards();
             this.checkGameEnd();
@@ -570,7 +823,7 @@ export class Battle extends Scene {
         } catch (error) {
             if (error instanceof Error) {
                 this.addLog(error.message);
-                this.showMessage(error.message, 0xff0000);
+                this.showMessage(error.message, 0xff4444);
             }
             this.isAnimating = false;
         }
@@ -587,17 +840,17 @@ export class Battle extends Scene {
         if (useCard) {
             const cardIndex = Math.floor(Math.random() * this.oponente.inventario.length);
             const result = this.arena.usarCarta(cardIndex);
-            this.addLog(`[CPU] ${result}`);
+            this.addLog(`💀 [CPU] ${result}`);
         } else {
             // Escolher ataque
             const attackNum = Math.random() < 0.5 ? 1 : 2;
             try {
                 const result = this.arena.executarAtaque(attackNum as 1 | 2);
-                this.addLog(`[CPU] ${result}`);
+                this.addLog(`💀 [CPU] ${result}`);
             } catch {
                 // Se falhar, tentar o outro ataque
                 const result = this.arena.executarAtaque(attackNum === 1 ? 2 : 1);
-                this.addLog(`[CPU] ${result}`);
+                this.addLog(`💀 [CPU] ${result}`);
             }
         }
 
@@ -613,22 +866,40 @@ export class Battle extends Scene {
     }
 
     private animateAttack(isPlayer: boolean, callback: () => void): void {
-        const startX = isPlayer ? 250 : 774;
-        const endX = isPlayer ? 774 : 250;
-        const startY = isPlayer ? 350 : 250;
-        const endY = isPlayer ? 250 : 350;
+        const startX = isPlayer ? 200 : 824;
+        const endX = isPlayer ? 824 : 200;
+        const startY = isPlayer ? 380 : 300;
+        const endY = isPlayer ? 300 : 380;
 
-        const projectile = this.add.circle(startX, startY, 10, 0xe94560);
+        // Projétil mais elaborado
+        const projectile = this.add.graphics();
+        projectile.fillStyle(isPlayer ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 1);
+        projectile.fillCircle(0, 0, 12);
+        projectile.lineStyle(3, 0xffffff, 0.8);
+        projectile.strokeCircle(0, 0, 12);
+        projectile.setPosition(startX, startY);
 
+        // Trilha de partículas
         this.tweens.add({
             targets: projectile,
             x: endX,
             y: endY,
-            duration: 300,
+            duration: 400,
             ease: 'Power2',
             onComplete: () => {
                 // Efeito de impacto
-                this.cameras.main.shake(100, 0.01);
+                this.cameras.main.shake(150, 0.015);
+                
+                // Flash no alvo
+                const impact = this.add.circle(endX, endY, 30, isPlayer ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 0.8);
+                this.tweens.add({
+                    targets: impact,
+                    scale: 2,
+                    alpha: 0,
+                    duration: 300,
+                    onComplete: () => impact.destroy()
+                });
+
                 projectile.destroy();
                 callback();
             }
@@ -636,19 +907,22 @@ export class Battle extends Scene {
     }
 
     private showMessage(text: string, color: number): void {
-        const message = this.add.text(512, 300, text, {
-            fontFamily: 'Arial Black',
-            fontSize: '32px',
+        const message = this.add.text(512, 320, text, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '36px',
             color: '#' + color.toString(16).padStart(6, '0'),
+            fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 4
+            strokeThickness: 5
         }).setOrigin(0.5);
 
         this.tweens.add({
             targets: message,
             alpha: 0,
-            y: 250,
-            duration: 1500,
+            y: 270,
+            scale: 1.2,
+            duration: 1800,
+            ease: 'Power2',
             onComplete: () => message.destroy()
         });
     }
@@ -658,7 +932,13 @@ export class Battle extends Scene {
             const vencedor = this.arena.vencedor;
             const jogadorVenceu = vencedor === this.jogador;
 
-            this.time.delayedCall(1000, () => {
+            // Mensagem dramática
+            const endText = jogadorVenceu ? '🏆 VITÓRIA! 🏆' : '💀 DERROTA 💀';
+            const endColor = jogadorVenceu ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood;
+            
+            this.showMessage(endText, endColor);
+
+            this.time.delayedCall(2000, () => {
                 this.scene.start('GameOver', {
                     vencedor: vencedor?.nome || 'Desconhecido',
                     jogadorVenceu,

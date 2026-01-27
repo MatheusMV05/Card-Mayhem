@@ -37,8 +37,16 @@ export class Preloader extends Scene {
     preload() {
         this.load.setPath('assets');
         
-        // Aqui carregaríamos assets se houvesse
-        // Como estamos usando gráficos procedurais, não há muito para carregar
+        // Carregar sprites das cartas
+        this.load.image('card-gray', 'CardGray.png');      // Comum
+        this.load.image('card-green', 'CardGreen.png');    // Incomum
+        this.load.image('card-blue', 'CardBlue.png');      // Raro
+        this.load.image('card-yellow', 'Cardyellow.png');  // Épico / Lendário
+        this.load.image('card-red', 'CardRed.png');        // Mayhem / Super Mayhem
+        
+        // Carregar backgrounds
+        this.load.image('throne-room', 'throne room.png');
+        this.load.image('bg', 'bg.png');
     }
 
     create() {
