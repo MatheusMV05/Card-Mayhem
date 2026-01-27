@@ -1,0 +1,42 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.87);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+}
+
+#app {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#game-container {
+    border-radius: 8px;
+    box-shadow: 0 0 50px rgba(233, 69, 96, 0.3);
+}
+
+/* Loading screen fallback */
+#game-container:empty::before {
+    content: 'Carregando Card Mayhem...';
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 1024px;
+    height: 768px;
+    background: #1a1a2e;
+    color: #e94560;
+    font-size: 24px;
+    font-weight: bold;
+}
