@@ -12,6 +12,14 @@ const MEDIEVAL_THEME = {
     blood: 0x8b0000
 };
 
+// Constantes de tela
+const SCREEN = {
+    WIDTH: 1920,
+    HEIGHT: 1080,
+    CENTER_X: 960,
+    CENTER_Y: 540
+};
+
 /**
  * MainMenu Scene - Menu principal com tema medieval
  */
@@ -42,40 +50,45 @@ export class MainMenu extends Scene {
     private createBackground(): void {
         // Tentar usar bg.png
         try {
-            const bg = this.add.image(512, 384, 'bg');
-            bg.setDisplaySize(1024, 768);
+            const bg = this.add.image(SCREEN.CENTER_X, SCREEN.CENTER_Y, 'bg');
+            bg.setDisplaySize(SCREEN.WIDTH, SCREEN.HEIGHT);
         } catch {
             const graphics = this.add.graphics();
             graphics.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1);
-            graphics.fillRect(0, 0, 1024, 768);
+            graphics.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
         }
 
         // Overlay para escurecer
         const overlay = this.add.graphics();
         overlay.fillStyle(0x000000, 0.4);
-        overlay.fillRect(0, 0, 1024, 768);
+        overlay.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
 
         // Vinheta nas bordas
         const vignette = this.add.graphics();
         vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.8, 0.8, 0, 0);
-        vignette.fillRect(0, 0, 1024, 100);
+        vignette.fillRect(0, 0, SCREEN.WIDTH, 100);
         vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.8, 0.8);
-        vignette.fillRect(0, 668, 1024, 100);
+        vignette.fillRect(0, SCREEN.HEIGHT - 100, SCREEN.WIDTH, 100);
     }
 
     private createTitle(): void {
-        // Banner decorativo atrás do título
+        // Banner decorativo atrás do título - CENTRALIZADO
+        const bannerWidth = 700;
+        const bannerHeight = 180;
+        const bannerX = SCREEN.CENTER_X - bannerWidth / 2;
+        const bannerY = 80;
+
         const bannerBg = this.add.graphics();
         bannerBg.fillStyle(MEDIEVAL_THEME.leather, 0.9);
-        bannerBg.fillRoundedRect(162, 80, 700, 180, 15);
+        bannerBg.fillRoundedRect(bannerX, bannerY, bannerWidth, bannerHeight, 15);
         bannerBg.lineStyle(6, MEDIEVAL_THEME.gold, 1);
-        bannerBg.strokeRoundedRect(162, 80, 700, 180, 15);
+        bannerBg.strokeRoundedRect(bannerX, bannerY, bannerWidth, bannerHeight, 15);
         bannerBg.lineStyle(3, MEDIEVAL_THEME.darkGold, 0.7);
-        bannerBg.strokeRoundedRect(175, 93, 674, 154, 10);
+        bannerBg.strokeRoundedRect(bannerX + 13, bannerY + 13, bannerWidth - 26, bannerHeight - 26, 10);
 
         // Decorações laterais
-        const leftDecor = this.add.text(200, 170, '⚔️', { fontSize: '50px' }).setOrigin(0.5);
-        const rightDecor = this.add.text(824, 170, '⚔️', { fontSize: '50px' }).setOrigin(0.5);
+        const leftDecor = this.add.text(bannerX + 50, bannerY + bannerHeight/2, '⚔️', { fontSize: '50px' }).setOrigin(0.5);
+        const rightDecor = this.add.text(bannerX + bannerWidth - 50, bannerY + bannerHeight/2, '⚔️', { fontSize: '50px' }).setOrigin(0.5);
 
         // Animação das decorações
         this.tweens.add({
@@ -88,8 +101,8 @@ export class MainMenu extends Scene {
         });
 
         // Título principal
-        this.titleText = this.add.text(512, 140, 'CARD MAYHEM', {
-            fontFamily: 'Georgia, serif',
+        this.titleText = this.add.text(SCREEN.CENTER_X, bannerY + 60, 'CARD MAYHEM', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '72px',
             color: '#d4af37',
             fontStyle: 'bold',
@@ -105,8 +118,8 @@ export class MainMenu extends Scene {
         }).setOrigin(0.5);
 
         // Subtítulo
-        this.add.text(512, 210, '⚔️ RPG Arena Battle ⚔️', {
-            fontFamily: 'Georgia, serif',
+        this.add.text(SCREEN.CENTER_X, bannerY + 130, '⚔️ RPG Arena Battle ⚔️', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '24px',
             color: '#f4e4bc',
             fontStyle: 'italic',
@@ -136,8 +149,11 @@ export class MainMenu extends Scene {
     }
 
     private createMenuButtons(): void {
+        const buttonStartY = 380;
+        const buttonSpacing = 100;
+
         // Botão JOGAR
-        this.createMedievalButton(512, 380, '⚔️ BATALHAR vs CPU', () => {
+        this.createMedievalButton(SCREEN.CENTER_X, buttonStartY, '⚔️ BATALHAR vs CPU', () => {
             this.cameras.main.fade(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
                 this.scene.start('CharacterSelect');
@@ -145,12 +161,12 @@ export class MainMenu extends Scene {
         }, false);
 
         // Botão PvP (desabilitado)
-        this.createMedievalButton(512, 480, '🏰 PvP Arena (Em Breve)', () => {
+        this.createMedievalButton(SCREEN.CENTER_X, buttonStartY + buttonSpacing, '🏰 PvP Arena (Em Breve)', () => {
             this.showWIPMessage();
         }, true);
 
         // Botão Instruções
-        this.createMedievalButton(512, 560, '📜 Como Jogar', () => {
+        this.createMedievalButton(SCREEN.CENTER_X, buttonStartY + buttonSpacing * 2, '📜 Como Jogar', () => {
             this.showInstructions();
         }, false, true);
     }
@@ -185,7 +201,7 @@ export class MainMenu extends Scene {
 
         // Texto do botão
         const buttonText = this.add.text(0, 0, text, {
-            fontFamily: 'Georgia, serif',
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: small ? '18px' : '24px',
             color: disabled ? '#888888' : '#d4af37',
             fontStyle: 'bold',
@@ -242,8 +258,8 @@ export class MainMenu extends Scene {
     private createParticles(): void {
         // Criar partículas de fogo/brasas flutuantes
         for (let i = 0; i < 40; i++) {
-            const x = Phaser.Math.Between(0, 1024);
-            const y = Phaser.Math.Between(400, 768);
+            const x = Phaser.Math.Between(0, SCREEN.WIDTH);
+            const y = Phaser.Math.Between(400, SCREEN.HEIGHT);
             const size = Phaser.Math.Between(2, 5);
             const colors = [0xd4af37, 0xff6b35, 0xffd700, 0xff4500];
             const color = Phaser.Utils.Array.GetRandom(colors);
@@ -261,8 +277,8 @@ export class MainMenu extends Scene {
                 repeat: -1,
                 delay: Phaser.Math.Between(0, 3000),
                 onRepeat: () => {
-                    particle.x = Phaser.Math.Between(0, 1024);
-                    particle.y = Phaser.Math.Between(500, 768);
+                    particle.x = Phaser.Math.Between(0, SCREEN.WIDTH);
+                    particle.y = Phaser.Math.Between(500, SCREEN.HEIGHT);
                     particle.alpha = alpha;
                     particle.scale = 1;
                 }
@@ -274,36 +290,41 @@ export class MainMenu extends Scene {
         // Linha decorativa
         const line = this.add.graphics();
         line.lineStyle(2, MEDIEVAL_THEME.gold, 0.5);
-        line.lineBetween(200, 680, 824, 680);
+        line.lineBetween(SCREEN.CENTER_X - 300, 750, SCREEN.CENTER_X + 300, 750);
 
         // Créditos
-        this.add.text(512, 720, 'Forjado com Phaser 3 + TypeScript', {
-            fontFamily: 'Georgia, serif',
-            fontSize: '14px',
+        this.add.text(SCREEN.CENTER_X, 800, 'Forjado com Phaser 3 + TypeScript', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '16px',
             color: '#8b7355',
             fontStyle: 'italic'
         }).setOrigin(0.5);
 
         // Versão
-        this.add.text(980, 750, 'v1.0', {
-            fontFamily: 'Georgia, serif',
-            fontSize: '12px',
+        this.add.text(SCREEN.WIDTH - 40, SCREEN.HEIGHT - 30, 'v1.0', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '14px',
             color: '#666666'
         }).setOrigin(1, 1);
     }
 
     private showWIPMessage(): void {
-        const overlay = this.add.rectangle(512, 384, 1024, 768, 0x000000, 0.8);
+        const overlay = this.add.rectangle(SCREEN.CENTER_X, SCREEN.CENTER_Y, SCREEN.WIDTH, SCREEN.HEIGHT, 0x000000, 0.8);
         
-        // Caixa de mensagem medieval
+        // Caixa de mensagem medieval - CENTRALIZADA
+        const boxWidth = 500;
+        const boxHeight = 300;
+        const boxX = SCREEN.CENTER_X - boxWidth / 2;
+        const boxY = SCREEN.CENTER_Y - boxHeight / 2;
+
         const msgBox = this.add.graphics();
         msgBox.fillStyle(MEDIEVAL_THEME.leather, 0.95);
-        msgBox.fillRoundedRect(262, 234, 500, 300, 15);
+        msgBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 15);
         msgBox.lineStyle(5, MEDIEVAL_THEME.gold, 1);
-        msgBox.strokeRoundedRect(262, 234, 500, 300, 15);
+        msgBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 15);
 
-        const title = this.add.text(512, 280, '🏰 Em Construção 🏰', {
-            fontFamily: 'Georgia, serif',
+        const title = this.add.text(SCREEN.CENTER_X, boxY + 60, '🏰 Em Construção 🏰', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '32px',
             color: '#d4af37',
             fontStyle: 'bold',
@@ -311,15 +332,15 @@ export class MainMenu extends Scene {
             strokeThickness: 3
         }).setOrigin(0.5);
 
-        const message = this.add.text(512, 370, 'O modo PvP está sendo\nforjado pelos mestres ferreiros.\n\nAguarde novidades em breve!', {
-            fontFamily: 'Georgia, serif',
+        const message = this.add.text(SCREEN.CENTER_X, boxY + 150, 'O modo PvP está sendo\nforjado pelos mestres ferreiros.\n\nAguarde novidades em breve!', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '18px',
             color: '#f4e4bc',
             align: 'center',
             lineSpacing: 8
         }).setOrigin(0.5);
 
-        const closeBtn = this.createCloseButton(512, 480, () => {
+        const closeBtn = this.createCloseButton(SCREEN.CENTER_X, boxY + boxHeight - 60, () => {
             overlay.destroy();
             msgBox.destroy();
             title.destroy();
@@ -329,23 +350,28 @@ export class MainMenu extends Scene {
     }
 
     private showInstructions(): void {
-        const overlay = this.add.rectangle(512, 384, 1024, 768, 0x000000, 0.85);
+        const overlay = this.add.rectangle(SCREEN.CENTER_X, SCREEN.CENTER_Y, SCREEN.WIDTH, SCREEN.HEIGHT, 0x000000, 0.85);
         
-        // Caixa de instruções
+        // Caixa de instruções - CENTRALIZADA
+        const boxWidth = 800;
+        const boxHeight = 650;
+        const boxX = SCREEN.CENTER_X - boxWidth / 2;
+        const boxY = SCREEN.CENTER_Y - boxHeight / 2;
+
         const msgBox = this.add.graphics();
         msgBox.fillStyle(MEDIEVAL_THEME.parchment, 0.98);
-        msgBox.fillRoundedRect(162, 100, 700, 550, 15);
+        msgBox.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 15);
         msgBox.lineStyle(5, MEDIEVAL_THEME.leather, 1);
-        msgBox.strokeRoundedRect(162, 100, 700, 550, 15);
+        msgBox.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 15);
 
-        const title = this.add.text(512, 150, '📜 Pergaminho do Guerreiro 📜', {
-            fontFamily: 'Georgia, serif',
-            fontSize: '28px',
+        const title = this.add.text(SCREEN.CENTER_X, boxY + 50, '📜 Pergaminho do Guerreiro 📜', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '32px',
             color: '#5c3317',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        const instructions = this.add.text(512, 380, 
+        const instructions = this.add.text(SCREEN.CENTER_X, boxY + boxHeight / 2, 
             `⚔️ COMBATE
 Escolha um campeão e enfrente a CPU em batalha.
 Cada classe possui 2 ataques únicos e habilidades especiais.
@@ -364,14 +390,14 @@ Use-as estrategicamente para virar a batalha!
 
 ⚡ DICA: Cartas Mayhem podem mudar completamente a batalha,
 mas cuidado... elas também podem se voltar contra você!`, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '14px',
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '16px',
             color: '#3d2914',
             align: 'center',
-            lineSpacing: 6
+            lineSpacing: 8
         }).setOrigin(0.5);
 
-        const closeBtn = this.createCloseButton(512, 600, () => {
+        const closeBtn = this.createCloseButton(SCREEN.CENTER_X, boxY + boxHeight - 50, () => {
             overlay.destroy();
             msgBox.destroy();
             title.destroy();
@@ -390,7 +416,7 @@ mas cuidado... elas também podem se voltar contra você!`, {
         bg.strokeRoundedRect(-80, -25, 160, 50, 10);
 
         const text = this.add.text(0, 0, '✕ Fechar', {
-            fontFamily: 'Georgia, serif',
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '18px',
             color: '#ffffff',
             fontStyle: 'bold'

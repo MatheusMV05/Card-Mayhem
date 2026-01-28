@@ -14,6 +14,14 @@ const MEDIEVAL_THEME = {
     defeat: 0x8b0000
 };
 
+// Constantes de tela
+const SCREEN = {
+    WIDTH: 1920,
+    HEIGHT: 1080,
+    CENTER_X: 960,
+    CENTER_Y: 540
+};
+
 /**
  * Dados recebidos da cena de batalha
  */
@@ -28,14 +36,14 @@ interface GameOverData {
  * GameOver Scene - Tela de fim de jogo com tema medieval
  */
 export class GameOver extends Scene {
-    private data!: GameOverData;
+    private gameOverData!: GameOverData;
 
     constructor() {
         super('GameOver');
     }
 
     init(data: GameOverData): void {
-        this.data = data;
+        this.gameOverData = data;
     }
 
     create(): void {
@@ -58,46 +66,46 @@ export class GameOver extends Scene {
     private createBackground(): void {
         const graphics = this.add.graphics();
         
-        if (this.data.jogadorVenceu) {
+        if (this.gameOverData.jogadorVenceu) {
             // Fundo dourado/verde para vitória
             graphics.fillGradientStyle(0x2a4a2a, 0x1a3a1a, 0x0f2a0f, 0x0a1a0a, 1);
         } else {
             // Fundo vermelho/escuro para derrota
             graphics.fillGradientStyle(0x4a2a2a, 0x3a1a1a, 0x2a0f0f, 0x1a0505, 1);
         }
-        graphics.fillRect(0, 0, 1024, 768);
+        graphics.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
 
         // Padrão decorativo medieval
         const pattern = this.add.graphics();
-        pattern.lineStyle(1, this.data.jogadorVenceu ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 0.1);
+        pattern.lineStyle(1, this.gameOverData.jogadorVenceu ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 0.1);
         
-        for (let i = 0; i < 20; i++) {
-            pattern.lineBetween(0, i * 40, 1024, i * 40);
-            pattern.lineBetween(i * 60, 0, i * 60, 768);
+        for (let i = 0; i < 30; i++) {
+            pattern.lineBetween(0, i * 40, SCREEN.WIDTH, i * 40);
+            pattern.lineBetween(i * 70, 0, i * 70, SCREEN.HEIGHT);
         }
 
         // Vinheta
         const vignette = this.add.graphics();
         vignette.fillStyle(0x000000, 0.5);
-        vignette.fillRect(0, 0, 1024, 80);
-        vignette.fillRect(0, 688, 1024, 80);
+        vignette.fillRect(0, 0, SCREEN.WIDTH, 80);
+        vignette.fillRect(0, SCREEN.HEIGHT - 80, SCREEN.WIDTH, 80);
     }
 
     private createParticles(): void {
-        const colors = this.data.jogadorVenceu 
+        const colors = this.gameOverData.jogadorVenceu 
             ? [0xd4af37, 0xffd700, 0x228b22, 0xffffff]
             : [0x8b0000, 0xff4444, 0x333333, 0x666666];
 
         for (let i = 0; i < 60; i++) {
-            const x = Phaser.Math.Between(0, 1024);
-            const y = Phaser.Math.Between(0, 768);
+            const x = Phaser.Math.Between(0, SCREEN.WIDTH);
+            const y = Phaser.Math.Between(0, SCREEN.HEIGHT);
             const size = Phaser.Math.Between(2, 6);
             const color = Phaser.Utils.Array.GetRandom(colors);
             const alpha = Phaser.Math.FloatBetween(0.3, 0.8);
 
             const particle = this.add.circle(x, y, size, color, alpha);
 
-            if (this.data.jogadorVenceu) {
+            if (this.gameOverData.jogadorVenceu) {
                 // Partículas subindo (celebração)
                 this.tweens.add({
                     targets: particle,
@@ -109,8 +117,8 @@ export class GameOver extends Scene {
                     repeat: -1,
                     delay: Phaser.Math.Between(0, 2000),
                     onRepeat: () => {
-                        particle.x = Phaser.Math.Between(0, 1024);
-                        particle.y = Phaser.Math.Between(500, 768);
+                        particle.x = Phaser.Math.Between(0, SCREEN.WIDTH);
+                        particle.y = Phaser.Math.Between(500, SCREEN.HEIGHT);
                         particle.alpha = alpha;
                         particle.scale = 1;
                     }
@@ -125,7 +133,7 @@ export class GameOver extends Scene {
                     repeat: -1,
                     delay: Phaser.Math.Between(0, 2000),
                     onRepeat: () => {
-                        particle.x = Phaser.Math.Between(0, 1024);
+                        particle.x = Phaser.Math.Between(0, SCREEN.WIDTH);
                         particle.y = Phaser.Math.Between(0, 100);
                         particle.alpha = alpha;
                     }
@@ -135,20 +143,25 @@ export class GameOver extends Scene {
     }
 
     private createResultBanner(): void {
-        const isVictory = this.data.jogadorVenceu;
+        const isVictory = this.gameOverData.jogadorVenceu;
 
-        // Banner grande medieval
+        // Banner grande medieval - CENTRALIZADO
+        const bannerWidth = 800;
+        const bannerHeight = 220;
+        const bannerX = SCREEN.CENTER_X - bannerWidth / 2;
+        const bannerY = 100;
+
         const banner = this.add.graphics();
         banner.fillStyle(MEDIEVAL_THEME.leather, 0.95);
-        banner.fillRoundedRect(162, 100, 700, 200, 15);
+        banner.fillRoundedRect(bannerX, bannerY, bannerWidth, bannerHeight, 15);
         banner.lineStyle(6, isVictory ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 1);
-        banner.strokeRoundedRect(162, 100, 700, 200, 15);
+        banner.strokeRoundedRect(bannerX, bannerY, bannerWidth, bannerHeight, 15);
         banner.lineStyle(3, MEDIEVAL_THEME.darkGold, 0.6);
-        banner.strokeRoundedRect(175, 113, 674, 174, 10);
+        banner.strokeRoundedRect(bannerX + 13, bannerY + 13, bannerWidth - 26, bannerHeight - 26, 10);
 
         // Ícone grande
         const icon = isVictory ? '🏆' : '💀';
-        this.add.text(512, 150, icon, {
+        this.add.text(SCREEN.CENTER_X, bannerY + 60, icon, {
             fontSize: '80px'
         }).setOrigin(0.5);
 
@@ -156,9 +169,9 @@ export class GameOver extends Scene {
         const resultText = isVictory ? 'VITÓRIA GLORIOSA!' : 'DERROTA AMARGA';
         const resultColor = isVictory ? '#d4af37' : '#ff4444';
 
-        const result = this.add.text(512, 240, resultText, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '42px',
+        const result = this.add.text(SCREEN.CENTER_X, bannerY + 150, resultText, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '48px',
             color: resultColor,
             fontStyle: 'bold',
             stroke: '#000000',
@@ -184,9 +197,9 @@ export class GameOver extends Scene {
         });
 
         // Mensagem secundária
-        this.add.text(512, 330, `${this.data.vencedor} conquistou a batalha!`, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '22px',
+        this.add.text(SCREEN.CENTER_X, bannerY + bannerHeight + 50, `${this.gameOverData.vencedor} conquistou a batalha!`, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '26px',
             color: '#f4e4bc',
             fontStyle: 'italic',
             stroke: '#000000',
@@ -195,19 +208,23 @@ export class GameOver extends Scene {
     }
 
     private createStats(): void {
-        const statsContainer = this.add.container(512, 460);
+        const statsY = 500;
+        const statsContainer = this.add.container(SCREEN.CENTER_X, statsY);
 
         // Fundo do painel de estatísticas
+        const panelWidth = 700;
+        const panelHeight = 200;
+
         const bg = this.add.graphics();
         bg.fillStyle(MEDIEVAL_THEME.parchment, 0.95);
-        bg.fillRoundedRect(-280, -80, 560, 160, 12);
+        bg.fillRoundedRect(-panelWidth/2, -panelHeight/2, panelWidth, panelHeight, 12);
         bg.lineStyle(4, MEDIEVAL_THEME.leather, 1);
-        bg.strokeRoundedRect(-280, -80, 560, 160, 12);
+        bg.strokeRoundedRect(-panelWidth/2, -panelHeight/2, panelWidth, panelHeight, 12);
 
         // Título
-        const statsTitle = this.add.text(0, -60, '📜 Crônica da Batalha 📜', {
-            fontFamily: 'Georgia, serif',
-            fontSize: '20px',
+        const statsTitle = this.add.text(0, -panelHeight/2 + 30, '📜 Crônica da Batalha 📜', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '24px',
             color: '#5c3317',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -215,50 +232,48 @@ export class GameOver extends Scene {
         // Separador
         const separator = this.add.graphics();
         separator.lineStyle(2, MEDIEVAL_THEME.leather, 0.5);
-        separator.lineBetween(-250, -35, 250, -35);
-        separator.lineBetween(0, -30, 0, 60);
+        separator.lineBetween(-panelWidth/2 + 30, -panelHeight/2 + 60, panelWidth/2 - 30, -panelHeight/2 + 60);
+        separator.lineBetween(0, -panelHeight/2 + 70, 0, panelHeight/2 - 20);
 
         // Estatísticas do jogador (esquerda)
-        const jogadorIcon = this.data.jogadorVenceu ? '👑' : '💔';
-        const jogadorColor = this.data.jogadorVenceu ? '#228b22' : '#8b0000';
+        const jogadorIcon = this.gameOverData.jogadorVenceu ? '👑' : '💔';
+        const jogadorColor = this.gameOverData.jogadorVenceu ? '#228b22' : '#8b0000';
         
-        const jogadorStats = this.add.text(-140, 10, 
-            `${jogadorIcon} ${this.data.jogador.nome}\n` +
-            `Classe: ${this.data.jogador.classe}\n` +
-            `HP Final: ${this.data.jogador.vida}`, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '14px',
+        const jogadorStats = this.add.text(-panelWidth/4, 20, 
+            `${jogadorIcon} ${this.gameOverData.jogador.nome}\n` +
+            `Classe: ${this.gameOverData.jogador.classe}\n` +
+            `HP Final: ${this.gameOverData.jogador.vida}`, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '18px',
             color: jogadorColor,
             align: 'center',
-            lineSpacing: 6
-        }).setOrigin(0.5);
-
-        // VS
-        this.add.text(0, 10, '⚔️', {
-            fontSize: '30px'
+            lineSpacing: 8
         }).setOrigin(0.5);
 
         // Estatísticas do oponente (direita)
-        const oponenteIcon = !this.data.jogadorVenceu ? '👑' : '💀';
-        const oponenteColor = !this.data.jogadorVenceu ? '#228b22' : '#8b0000';
+        const oponenteIcon = !this.gameOverData.jogadorVenceu ? '👑' : '💀';
+        const oponenteColor = !this.gameOverData.jogadorVenceu ? '#228b22' : '#8b0000';
         
-        const oponenteStats = this.add.text(140, 10,
-            `${oponenteIcon} ${this.data.oponente.nome}\n` +
-            `Classe: ${this.data.oponente.classe}\n` +
-            `HP Final: ${this.data.oponente.vida}`, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '14px',
+        const oponenteStats = this.add.text(panelWidth/4, 20,
+            `${oponenteIcon} ${this.gameOverData.oponente.nome}\n` +
+            `Classe: ${this.gameOverData.oponente.classe}\n` +
+            `HP Final: ${this.gameOverData.oponente.vida}`, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '18px',
             color: oponenteColor,
             align: 'center',
-            lineSpacing: 6
+            lineSpacing: 8
         }).setOrigin(0.5);
 
         statsContainer.add([bg, statsTitle, separator, jogadorStats, oponenteStats]);
     }
 
     private createButtons(): void {
+        const buttonY = 720;
+        const buttonSpacing = 250;
+
         // Botão Jogar Novamente
-        this.createMedievalButton(400, 620, '⚔️ Batalhar Novamente', () => {
+        this.createMedievalButton(SCREEN.CENTER_X - buttonSpacing/2, buttonY, '⚔️ Batalhar Novamente', () => {
             this.cameras.main.fade(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
                 this.scene.start('CharacterSelect');
@@ -266,7 +281,7 @@ export class GameOver extends Scene {
         });
 
         // Botão Menu Principal
-        this.createMedievalButton(624, 620, '🏰 Menu Principal', () => {
+        this.createMedievalButton(SCREEN.CENTER_X + buttonSpacing/2, buttonY, '🏰 Menu Principal', () => {
             this.cameras.main.fade(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
                 this.scene.start('MainMenu');
@@ -281,8 +296,8 @@ export class GameOver extends Scene {
         callback: () => void
     ): GameObjects.Container {
         const container = this.add.container(x, y);
-        const width = 200;
-        const height = 55;
+        const width = 220;
+        const height = 60;
 
         // Fundo do botão
         const bg = this.add.graphics();
@@ -293,12 +308,12 @@ export class GameOver extends Scene {
 
         // Texto do botão
         const buttonText = this.add.text(0, 0, text, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '14px',
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '18px',
             color: '#d4af37',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 1
+            strokeThickness: 2
         }).setOrigin(0.5);
 
         container.add([bg, buttonText]);

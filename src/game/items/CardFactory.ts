@@ -101,8 +101,9 @@ export class CardFactory {
 
     /**
      * Cria uma carta aleatória da raridade especificada
+     * @param turnoAtual - Usado para filtrar cartas que só podem aparecer após certo turno
      */
-    static criarCartaPorRaridade(raridade: Raridade): IItem {
+    static criarCartaPorRaridade(raridade: Raridade, turnoAtual: number = 999): IItem {
         let pool: (() => IItem)[];
         
         switch (raridade) {
@@ -110,7 +111,12 @@ export class CardFactory {
                 pool = this.cartasSuperMayhem;
                 break;
             case Raridade.Mayhem:
-                pool = this.cartasMayhem;
+                // Filtrar Inversão Temporal se turno < 3
+                if (turnoAtual < 3) {
+                    pool = this.cartasMayhem.filter((_, i) => i !== 3); // Índice 3 = InversaoTemporal
+                } else {
+                    pool = this.cartasMayhem;
+                }
                 break;
             case Raridade.Lendario:
                 pool = this.cartasLendarias;
@@ -125,6 +131,10 @@ export class CardFactory {
                 pool = this.cartasComuns;
         }
         
+        if (pool.length === 0) {
+            pool = this.cartasComuns;
+        }
+        
         const indice = Math.floor(Math.random() * pool.length);
         return pool[indice]();
     }
@@ -132,18 +142,19 @@ export class CardFactory {
     /**
      * Cria uma carta aleatória com raridade sorteada
      */
-    static criarCartaAleatoria(): IItem {
+    static criarCartaAleatoria(turnoAtual: number = 999): IItem {
         const raridade = this.sortearRaridade();
-        return this.criarCartaPorRaridade(raridade);
+        return this.criarCartaPorRaridade(raridade, turnoAtual);
     }
 
     /**
      * Cria múltiplas cartas aleatórias
+     * @param turnoAtual - Turno atual para filtrar cartas restritas
      */
-    static criarCartas(quantidade: number): IItem[] {
+    static criarCartas(quantidade: number, turnoAtual: number = 999): IItem[] {
         const cartas: IItem[] = [];
         for (let i = 0; i < quantidade; i++) {
-            cartas.push(this.criarCartaAleatoria());
+            cartas.push(this.criarCartaAleatoria(turnoAtual));
         }
         return cartas;
     }

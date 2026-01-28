@@ -30,32 +30,11 @@ const MEDIEVAL_THEME = {
     manaBlue: 0x4169e1,
     wood: 0x654321,
     iron: 0x71797e,
-    shadow: 0x1a1a1a,
-    mayhem: 0xff0000,
-    fury: 0xff4500
-};
-
-// Constantes de timing para gameplay mais lenta
-const TIMING = {
-    ACTION_DELAY: 800,        // Delay antes de executar ação
-    ANIMATION_DURATION: 600,  // Duração das animações
-    MESSAGE_DURATION: 2500,   // Tempo que mensagens ficam na tela
-    CPU_THINK_DELAY: 1500,    // Tempo de "pensamento" da CPU
-    TURN_TRANSITION: 1200,    // Transição entre turnos
-    MAYHEM_EFFECT: 3000       // Duração do efeito Mayhem
-};
-
-// Dimensões para 1920x1080
-const SCREEN = {
-    WIDTH: 1920,
-    HEIGHT: 1080,
-    CENTER_X: 960,
-    CENTER_Y: 540
+    shadow: 0x1a1a1a
 };
 
 /**
  * Battle Scene - Cena principal de batalha com tema medieval
- * Versão 2.0 - Corrigida para melhor gameplay
  */
 export class Battle extends Scene {
     private arena!: Arena;
@@ -78,27 +57,14 @@ export class Battle extends Scene {
     private logTexts: GameObjects.Text[] = [];
     private actionContainer!: GameObjects.Container;
     private cardsContainer!: GameObjects.Container;
-    private attackButtons: GameObjects.Container[] = [];
     private isPlayerTurn: boolean = true;
     private isAnimating: boolean = false;
-    private actionBlocked: boolean = false;
 
     constructor() {
         super('Battle');
     }
 
-    /**
-     * Reset completo da cena para nova partida
-     */
     init(data: BattleData): void {
-        // Reset de estados
-        this.isPlayerTurn = true;
-        this.isAnimating = false;
-        this.actionBlocked = false;
-        this.logTexts = [];
-        this.attackButtons = [];
-
-        // Dados da partida
         this.jogador = data.jogador;
         this.oponente = data.oponente;
         this.jogadorCor = data.jogadorClasse.cor;
@@ -106,185 +72,199 @@ export class Battle extends Scene {
     }
 
     create(): void {
-        // Reset personagens para nova partida
-        this.jogador.resetar();
-        this.oponente.resetar();
-
-        // Iniciar arena nova
+        // Iniciar arena
         this.arena = new Arena();
         this.arena.iniciarBatalha(this.jogador, this.oponente);
 
-        // Fundo
+        // Fundo com imagem throne room
         this.createBackground();
 
-        // Indicador de turno
+        // Indicador de turno (topo)
         this.createTurnIndicator();
 
-        // Painéis de status
+        // UI de status dos personagens
         this.createStatusPanels();
 
         // Personagens visuais
         this.createCharacterVisuals();
 
-        // Área de log
+        // Área de log (pergaminho)
         this.createLogArea();
 
-        // Área de ações
+        // Área de ações (ataques e cartas) - painel inferior
         this.createActionArea();
 
-        // Iniciar primeiro turno com delay
-        this.addLog('⚔️ A batalha começou!');
-        this.time.delayedCall(TIMING.TURN_TRANSITION, () => this.startTurn());
+        // Iniciar primeiro turno
+        this.startTurn();
     }
 
     private createBackground(): void {
-        const bg = this.add.image(SCREEN.CENTER_X, SCREEN.CENTER_Y, 'throne-room');
-        bg.setDisplaySize(SCREEN.WIDTH, SCREEN.HEIGHT);
+        // Imagem de fundo throne room
+        const bg = this.add.image(512, 384, 'throne-room');
+        bg.setDisplaySize(1024, 768);
         
+        // Overlay escuro para melhor contraste da UI
         const overlay = this.add.graphics();
-        overlay.fillStyle(0x000000, 0.25);
-        overlay.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
+        overlay.fillStyle(0x000000, 0.3);
+        overlay.fillRect(0, 0, 1024, 768);
     }
 
     private createTurnIndicator(): void {
-        const bannerContainer = this.add.container(SCREEN.CENTER_X, 60);
+        // Banner medieval para indicador de turno
+        const bannerContainer = this.add.container(512, 45);
 
+        // Fundo do banner
         const banner = this.add.graphics();
         banner.fillStyle(MEDIEVAL_THEME.leather, 0.95);
-        banner.fillRoundedRect(-280, -45, 560, 90, 12);
-        banner.lineStyle(5, MEDIEVAL_THEME.gold, 1);
-        banner.strokeRoundedRect(-280, -45, 560, 90, 12);
-        banner.lineStyle(3, MEDIEVAL_THEME.darkGold, 1);
-        banner.strokeRoundedRect(-265, -30, 530, 60, 8);
+        banner.fillRoundedRect(-180, -35, 360, 70, 8);
+        banner.lineStyle(4, MEDIEVAL_THEME.gold, 1);
+        banner.strokeRoundedRect(-180, -35, 360, 70, 8);
+        
+        // Decorações douradas
+        banner.lineStyle(2, MEDIEVAL_THEME.darkGold, 1);
+        banner.strokeRoundedRect(-170, -25, 340, 50, 5);
 
         this.turnoText = this.add.text(0, 0, '⚔️ TURNO 1 ⚔️', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '42px',
+            fontSize: '28px',
             color: '#d4af37',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 4
+            strokeThickness: 3
         }).setOrigin(0.5);
 
         bannerContainer.add([banner, this.turnoText]);
     }
 
     private createStatusPanels(): void {
+        // === PAINEL DO JOGADOR (esquerda) ===
         this.createPlayerPanel();
+        
+        // === PAINEL DO OPONENTE (direita) ===
         this.createOpponentPanel();
     }
 
     private createPlayerPanel(): void {
-        const panelX = 30;
-        const panelY = 140;
-        const panelWidth = 420;
-        const panelHeight = 200;
+        const panelX = 20;
+        const panelY = 100;
+        const panelWidth = 280;
+        const panelHeight = 140;
 
+        // Container do painel
         const panel = this.add.container(panelX, panelY);
 
+        // Fundo estilo pergaminho/couro
         const bg = this.add.graphics();
-        bg.fillStyle(MEDIEVAL_THEME.leather, 0.92);
-        bg.fillRoundedRect(0, 0, panelWidth, panelHeight, 15);
-        bg.lineStyle(4, MEDIEVAL_THEME.gold, 1);
-        bg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 15);
-        bg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.8);
-        bg.strokeRoundedRect(12, 12, panelWidth - 24, panelHeight - 24, 10);
+        bg.fillStyle(MEDIEVAL_THEME.leather, 0.9);
+        bg.fillRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(3, MEDIEVAL_THEME.gold, 1);
+        bg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.7);
+        bg.strokeRoundedRect(8, 8, panelWidth - 16, panelHeight - 16, 6);
 
-        const nameText = this.add.text(panelWidth / 2, 40, `⚔️ ${this.jogador.nome}`, {
+        // Nome do jogador
+        const nameText = this.add.text(panelWidth / 2, 25, `⚔️ ${this.jogador.nome}`, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '28px',
+            fontSize: '18px',
             color: '#' + this.jogadorCor.toString(16).padStart(6, '0'),
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(0.5);
 
-        const classeText = this.add.text(panelWidth / 2, 72, this.jogador.classe, {
+        // Classe
+        const classeText = this.add.text(panelWidth / 2, 48, this.jogador.classe, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '20px',
+            fontSize: '14px',
             color: '#f4e4bc'
         }).setOrigin(0.5);
 
         panel.add([bg, nameText, classeText]);
 
+        // Barras de vida e mana
         this.jogadorHealthBar = this.add.graphics();
         this.jogadorManaBar = this.add.graphics();
         
-        this.jogadorHealthText = this.add.text(panelX + panelWidth - 20, panelY + 115, '', {
+        this.jogadorHealthText = this.add.text(panelX + panelWidth - 10, panelY + 75, '', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '20px',
+            fontSize: '14px',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(1, 0.5);
 
-        this.jogadorManaText = this.add.text(panelX + panelWidth - 20, panelY + 160, '', {
+        this.jogadorManaText = this.add.text(panelX + panelWidth - 10, panelY + 105, '', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '20px',
+            fontSize: '14px',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(1, 0.5);
     }
 
     private createOpponentPanel(): void {
-        const panelX = SCREEN.WIDTH - 450;
-        const panelY = 140;
-        const panelWidth = 420;
-        const panelHeight = 200;
+        const panelX = 724;
+        const panelY = 100;
+        const panelWidth = 280;
+        const panelHeight = 140;
 
+        // Container do painel
         const panel = this.add.container(panelX, panelY);
 
+        // Fundo estilo pergaminho/couro
         const bg = this.add.graphics();
-        bg.fillStyle(MEDIEVAL_THEME.darkLeather, 0.92);
-        bg.fillRoundedRect(0, 0, panelWidth, panelHeight, 15);
-        bg.lineStyle(4, MEDIEVAL_THEME.blood, 1);
-        bg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 15);
-        bg.lineStyle(2, MEDIEVAL_THEME.iron, 0.8);
-        bg.strokeRoundedRect(12, 12, panelWidth - 24, panelHeight - 24, 10);
+        bg.fillStyle(MEDIEVAL_THEME.darkLeather, 0.9);
+        bg.fillRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(3, MEDIEVAL_THEME.blood, 1);
+        bg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 10);
+        bg.lineStyle(2, MEDIEVAL_THEME.iron, 0.7);
+        bg.strokeRoundedRect(8, 8, panelWidth - 16, panelHeight - 16, 6);
 
-        const nameText = this.add.text(panelWidth / 2, 40, `💀 ${this.oponente.nome}`, {
+        // Nome do oponente
+        const nameText = this.add.text(panelWidth / 2, 25, `💀 ${this.oponente.nome}`, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '28px',
+            fontSize: '18px',
             color: '#' + this.oponenteCor.toString(16).padStart(6, '0'),
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(0.5);
 
-        const classeText = this.add.text(panelWidth / 2, 72, this.oponente.classe, {
+        // Classe
+        const classeText = this.add.text(panelWidth / 2, 48, this.oponente.classe, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '20px',
+            fontSize: '14px',
             color: '#ccbbaa'
         }).setOrigin(0.5);
 
         panel.add([bg, nameText, classeText]);
 
+        // Barras de vida e mana
         this.oponenteHealthBar = this.add.graphics();
         this.oponenteManaBar = this.add.graphics();
         
-        this.oponenteHealthText = this.add.text(panelX + panelWidth - 20, panelY + 115, '', {
+        this.oponenteHealthText = this.add.text(panelX + panelWidth - 10, panelY + 75, '', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '20px',
+            fontSize: '14px',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(1, 0.5);
 
-        this.oponenteManaText = this.add.text(panelX + panelWidth - 20, panelY + 160, '', {
+        this.oponenteManaText = this.add.text(panelX + panelWidth - 10, panelY + 105, '', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '20px',
+            fontSize: '14px',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(1, 0.5);
 
         this.updateStatusBars();
     }
 
     private updateStatusBars(): void {
-        const barWidth = 280;
-        const barHeight = 32;
+        const barWidth = 180;
+        const barHeight = 22;
         
         // === JOGADOR ===
         const jogadorHpPercent = Math.max(0, this.jogador.vida / this.jogador.vidaMaxima);
@@ -292,38 +272,39 @@ export class Battle extends Scene {
             ? Math.max(0, this.jogador.mana / this.jogador.manaMaxima) 
             : 0;
 
-        const jX = 60;
-        const jHealthY = 245;
-        const jManaY = 290;
+        const jX = 35;
+        const jHealthY = 165;
+        const jManaY = 195;
 
         this.jogadorHealthBar.clear();
+        // Fundo da barra
         this.jogadorHealthBar.fillStyle(0x2a2a2a, 1);
-        this.jogadorHealthBar.fillRoundedRect(jX, jHealthY, barWidth, barHeight, 6);
-        this.jogadorHealthBar.lineStyle(3, MEDIEVAL_THEME.gold, 0.9);
-        this.jogadorHealthBar.strokeRoundedRect(jX, jHealthY, barWidth, barHeight, 6);
+        this.jogadorHealthBar.fillRoundedRect(jX, jHealthY, barWidth, barHeight, 4);
+        // Borda decorativa
+        this.jogadorHealthBar.lineStyle(2, MEDIEVAL_THEME.gold, 0.8);
+        this.jogadorHealthBar.strokeRoundedRect(jX, jHealthY, barWidth, barHeight, 4);
+        // Barra de vida
         if (jogadorHpPercent > 0) {
             this.jogadorHealthBar.fillStyle(MEDIEVAL_THEME.healthGreen, 1);
-            this.jogadorHealthBar.fillRoundedRect(jX + 3, jHealthY + 3, (barWidth - 6) * jogadorHpPercent, barHeight - 6, 4);
+            this.jogadorHealthBar.fillRoundedRect(jX + 2, jHealthY + 2, (barWidth - 4) * jogadorHpPercent, barHeight - 4, 3);
         }
+        // Ícone
         this.jogadorHealthText.setText(`❤️ ${this.jogador.vida}/${this.jogador.vidaMaxima}`);
 
         this.jogadorManaBar.clear();
         this.jogadorManaBar.fillStyle(0x2a2a2a, 1);
-        this.jogadorManaBar.fillRoundedRect(jX, jManaY, barWidth, barHeight - 6, 6);
-        this.jogadorManaBar.lineStyle(3, MEDIEVAL_THEME.gold, 0.9);
-        this.jogadorManaBar.strokeRoundedRect(jX, jManaY, barWidth, barHeight - 6, 6);
+        this.jogadorManaBar.fillRoundedRect(jX, jManaY, barWidth, barHeight - 4, 4);
+        this.jogadorManaBar.lineStyle(2, MEDIEVAL_THEME.gold, 0.8);
+        this.jogadorManaBar.strokeRoundedRect(jX, jManaY, barWidth, barHeight - 4, 4);
         
         if (this.jogador.manaMaxima > 0) {
             if (jogadorManaPercent > 0) {
                 this.jogadorManaBar.fillStyle(MEDIEVAL_THEME.manaBlue, 1);
-                this.jogadorManaBar.fillRoundedRect(jX + 3, jManaY + 3, (barWidth - 6) * jogadorManaPercent, barHeight - 12, 4);
+                this.jogadorManaBar.fillRoundedRect(jX + 2, jManaY + 2, (barWidth - 4) * jogadorManaPercent, barHeight - 8, 3);
             }
             this.jogadorManaText.setText(`💧 ${this.jogador.mana}/${this.jogador.manaMaxima}`);
         } else {
-            // Guerreiro: Sistema de Fúria
-            this.jogadorManaBar.fillStyle(MEDIEVAL_THEME.fury, 1);
-            this.jogadorManaBar.fillRoundedRect(jX + 3, jManaY + 3, barWidth - 6, barHeight - 12, 4);
-            this.jogadorManaText.setText('🔥 FÚRIA');
+            this.jogadorManaText.setText('⚔️ Fúria');
         }
 
         // === OPONENTE ===
@@ -332,40 +313,38 @@ export class Battle extends Scene {
             ? Math.max(0, this.oponente.mana / this.oponente.manaMaxima) 
             : 0;
 
-        const oX = SCREEN.WIDTH - 420;
-        const oHealthY = 245;
-        const oManaY = 290;
+        const oX = 739;
+        const oHealthY = 165;
+        const oManaY = 195;
 
         this.oponenteHealthBar.clear();
         this.oponenteHealthBar.fillStyle(0x2a2a2a, 1);
-        this.oponenteHealthBar.fillRoundedRect(oX, oHealthY, barWidth, barHeight, 6);
-        this.oponenteHealthBar.lineStyle(3, MEDIEVAL_THEME.blood, 0.9);
-        this.oponenteHealthBar.strokeRoundedRect(oX, oHealthY, barWidth, barHeight, 6);
+        this.oponenteHealthBar.fillRoundedRect(oX, oHealthY, barWidth, barHeight, 4);
+        this.oponenteHealthBar.lineStyle(2, MEDIEVAL_THEME.blood, 0.8);
+        this.oponenteHealthBar.strokeRoundedRect(oX, oHealthY, barWidth, barHeight, 4);
         if (oponenteHpPercent > 0) {
             this.oponenteHealthBar.fillStyle(0xdc2626, 1);
-            this.oponenteHealthBar.fillRoundedRect(oX + 3, oHealthY + 3, (barWidth - 6) * oponenteHpPercent, barHeight - 6, 4);
+            this.oponenteHealthBar.fillRoundedRect(oX + 2, oHealthY + 2, (barWidth - 4) * oponenteHpPercent, barHeight - 4, 3);
         }
         this.oponenteHealthText.setText(`❤️ ${this.oponente.vida}/${this.oponente.vidaMaxima}`);
 
         this.oponenteManaBar.clear();
         this.oponenteManaBar.fillStyle(0x2a2a2a, 1);
-        this.oponenteManaBar.fillRoundedRect(oX, oManaY, barWidth, barHeight - 6, 6);
-        this.oponenteManaBar.lineStyle(3, MEDIEVAL_THEME.blood, 0.9);
-        this.oponenteManaBar.strokeRoundedRect(oX, oManaY, barWidth, barHeight - 6, 6);
+        this.oponenteManaBar.fillRoundedRect(oX, oManaY, barWidth, barHeight - 4, 4);
+        this.oponenteManaBar.lineStyle(2, MEDIEVAL_THEME.blood, 0.8);
+        this.oponenteManaBar.strokeRoundedRect(oX, oManaY, barWidth, barHeight - 4, 4);
         
         if (this.oponente.manaMaxima > 0) {
             if (oponenteManaPercent > 0) {
                 this.oponenteManaBar.fillStyle(MEDIEVAL_THEME.manaBlue, 1);
-                this.oponenteManaBar.fillRoundedRect(oX + 3, oManaY + 3, (barWidth - 6) * oponenteManaPercent, barHeight - 12, 4);
+                this.oponenteManaBar.fillRoundedRect(oX + 2, oManaY + 2, (barWidth - 4) * oponenteManaPercent, barHeight - 8, 3);
             }
             this.oponenteManaText.setText(`💧 ${this.oponente.mana}/${this.oponente.manaMaxima}`);
         } else {
-            this.oponenteManaBar.fillStyle(MEDIEVAL_THEME.fury, 1);
-            this.oponenteManaBar.fillRoundedRect(oX + 3, oManaY + 3, barWidth - 6, barHeight - 12, 4);
-            this.oponenteManaText.setText('🔥 FÚRIA');
+            this.oponenteManaText.setText('⚔️ Fúria');
         }
 
-        // Atualizar indicador de turno
+        // Atualizar turno
         const turnOwner = this.isPlayerTurn ? 'SEU TURNO' : 'TURNO INIMIGO';
         this.turnoText.setText(`⚔️ ${turnOwner} - TURNO ${this.arena.turnoAtual} ⚔️`);
     }
@@ -397,89 +376,101 @@ export class Battle extends Scene {
     }
 
     private createCharacterVisuals(): void {
-        // Jogador (esquerda)
-        const jogadorContainer = this.add.container(380, 520);
+        // === JOGADOR (esquerda) ===
+        const jogadorContainer = this.add.container(200, 380);
 
-        const jogadorShadow = this.add.ellipse(0, 100, 180, 50, 0x000000, 0.5);
+        // Círculo de base (sombra)
+        const jogadorShadow = this.add.ellipse(0, 70, 120, 35, 0x000000, 0.5);
         
+        // Plataforma/pedestal do jogador
         const jogadorPedestal = this.add.graphics();
-        jogadorPedestal.fillStyle(MEDIEVAL_THEME.gold, 0.35);
-        jogadorPedestal.fillEllipse(0, 90, 150, 40);
-        jogadorPedestal.lineStyle(3, MEDIEVAL_THEME.gold, 0.9);
-        jogadorPedestal.strokeEllipse(0, 90, 150, 40);
+        jogadorPedestal.fillStyle(MEDIEVAL_THEME.gold, 0.3);
+        jogadorPedestal.fillEllipse(0, 60, 100, 25);
+        jogadorPedestal.lineStyle(2, MEDIEVAL_THEME.gold, 0.8);
+        jogadorPedestal.strokeEllipse(0, 60, 100, 25);
 
+        // Sprite animado do jogador (escalado de 16x16 para tamanho visível)
         const jogadorSpriteKey = this.getCharacterSpriteKey(this.jogador.classe);
         const jogadorAnimKey = this.getCharacterAnimKey(this.jogador.classe);
         const jogadorSprite = this.add.sprite(0, 0, jogadorSpriteKey);
-        jogadorSprite.setScale(10);
+        jogadorSprite.setScale(6); // 16x16 * 6 = 96x96
         jogadorSprite.setOrigin(0.5, 0.7);
-        jogadorSprite.play(jogadorAnimKey);
+        jogadorSprite.play(jogadorAnimKey); // Iniciar animação idle
         
+        // Borda brilhante ao redor do sprite
         const jogadorGlow = this.add.graphics();
-        jogadorGlow.lineStyle(4, this.jogadorCor, 0.8);
-        jogadorGlow.strokeCircle(0, -10, 80);
-        jogadorGlow.lineStyle(2, MEDIEVAL_THEME.gold, 0.6);
-        jogadorGlow.strokeCircle(0, -10, 88);
+        jogadorGlow.lineStyle(3, this.jogadorCor, 0.8);
+        jogadorGlow.strokeCircle(0, -10, 55);
+        jogadorGlow.lineStyle(2, MEDIEVAL_THEME.gold, 0.5);
+        jogadorGlow.strokeCircle(0, -10, 60);
 
-        const jogadorNomeTag = this.add.text(0, 80, this.jogador.nome, {
+        // Nome abaixo do personagem
+        const jogadorNomeTag = this.add.text(0, 55, this.jogador.nome, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '22px',
+            fontSize: '14px',
             color: '#d4af37',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 4
+            strokeThickness: 3
         }).setOrigin(0.5);
 
         jogadorContainer.add([jogadorShadow, jogadorPedestal, jogadorGlow, jogadorSprite, jogadorNomeTag]);
 
+        // Animação de flutuação sutil
         this.tweens.add({
             targets: jogadorSprite,
-            y: -8,
-            duration: 1800,
+            y: -5,
+            duration: 1500,
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
 
-        // Oponente (direita)
-        const oponenteContainer = this.add.container(SCREEN.WIDTH - 380, 420);
+        // === OPONENTE (direita) ===
+        const oponenteContainer = this.add.container(824, 300);
 
-        const oponenteShadow = this.add.ellipse(0, 100, 180, 50, 0x000000, 0.5);
+        // Círculo de base (sombra)
+        const oponenteShadow = this.add.ellipse(0, 70, 120, 35, 0x000000, 0.5);
 
+        // Plataforma/pedestal do oponente
         const oponentePedestal = this.add.graphics();
-        oponentePedestal.fillStyle(MEDIEVAL_THEME.blood, 0.35);
-        oponentePedestal.fillEllipse(0, 90, 150, 40);
-        oponentePedestal.lineStyle(3, MEDIEVAL_THEME.blood, 0.9);
-        oponentePedestal.strokeEllipse(0, 90, 150, 40);
+        oponentePedestal.fillStyle(MEDIEVAL_THEME.blood, 0.3);
+        oponentePedestal.fillEllipse(0, 60, 100, 25);
+        oponentePedestal.lineStyle(2, MEDIEVAL_THEME.blood, 0.8);
+        oponentePedestal.strokeEllipse(0, 60, 100, 25);
 
+        // Sprite animado do oponente (escalado e espelhado)
         const oponenteSpriteKey = this.getCharacterSpriteKey(this.oponente.classe);
         const oponenteAnimKey = this.getCharacterAnimKey(this.oponente.classe);
         const oponenteSprite = this.add.sprite(0, 0, oponenteSpriteKey);
-        oponenteSprite.setScale(-10, 10);
+        oponenteSprite.setScale(-6, 6); // Espelhado horizontalmente
         oponenteSprite.setOrigin(0.5, 0.7);
-        oponenteSprite.play(oponenteAnimKey);
+        oponenteSprite.play(oponenteAnimKey); // Iniciar animação idle
 
+        // Borda sinistra ao redor do sprite
         const oponenteGlow = this.add.graphics();
-        oponenteGlow.lineStyle(4, this.oponenteCor, 0.8);
-        oponenteGlow.strokeCircle(0, -10, 80);
-        oponenteGlow.lineStyle(2, MEDIEVAL_THEME.blood, 0.6);
-        oponenteGlow.strokeCircle(0, -10, 88);
+        oponenteGlow.lineStyle(3, this.oponenteCor, 0.8);
+        oponenteGlow.strokeCircle(0, -10, 55);
+        oponenteGlow.lineStyle(2, MEDIEVAL_THEME.blood, 0.5);
+        oponenteGlow.strokeCircle(0, -10, 60);
 
-        const oponenteNomeTag = this.add.text(0, 80, this.oponente.nome, {
+        // Nome abaixo do personagem
+        const oponenteNomeTag = this.add.text(0, 55, this.oponente.nome, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '22px',
+            fontSize: '14px',
             color: '#ff6666',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 4
+            strokeThickness: 3
         }).setOrigin(0.5);
 
         oponenteContainer.add([oponenteShadow, oponentePedestal, oponenteGlow, oponenteSprite, oponenteNomeTag]);
 
+        // Animação idle sutil para oponente
         this.tweens.add({
             targets: oponenteSprite,
-            y: -8,
-            duration: 2000,
+            y: -5,
+            duration: 1800,
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut'
@@ -487,20 +478,22 @@ export class Battle extends Scene {
     }
 
     private createLogArea(): void {
-        // Log maior e mais legível (centro superior)
-        this.logContainer = this.add.container(SCREEN.CENTER_X - 350, 130);
+        // Pergaminho de histórico (centro superior)
+        this.logContainer = this.add.container(320, 100);
 
+        // Fundo estilo pergaminho
         const logBg = this.add.graphics();
-        logBg.fillStyle(MEDIEVAL_THEME.parchment, 0.92);
-        logBg.fillRoundedRect(0, 0, 700, 260, 12);
-        logBg.lineStyle(4, MEDIEVAL_THEME.leather, 1);
-        logBg.strokeRoundedRect(0, 0, 700, 260, 12);
-        logBg.lineStyle(2, MEDIEVAL_THEME.darkParchment, 0.9);
-        logBg.strokeRoundedRect(12, 12, 676, 236, 8);
+        logBg.fillStyle(MEDIEVAL_THEME.parchment, 0.9);
+        logBg.fillRoundedRect(0, 0, 380, 150, 8);
+        logBg.lineStyle(3, MEDIEVAL_THEME.leather, 1);
+        logBg.strokeRoundedRect(0, 0, 380, 150, 8);
+        logBg.lineStyle(1, MEDIEVAL_THEME.darkParchment, 0.8);
+        logBg.strokeRoundedRect(8, 8, 364, 134, 5);
 
-        const logTitle = this.add.text(350, 28, '📜 Crônicas da Batalha', {
+        // Título
+        const logTitle = this.add.text(190, 18, '📜 Crônicas da Batalha', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '24px',
+            fontSize: '16px',
             color: '#5c3317',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -509,22 +502,22 @@ export class Battle extends Scene {
     }
 
     private addLog(message: string): void {
-        const maxLogs = 6;
+        const maxLogs = 5;
         
         if (this.logTexts.length >= maxLogs) {
             const oldText = this.logTexts.shift();
             oldText?.destroy();
             
             this.logTexts.forEach((text, index) => {
-                text.y = 55 + (index * 28);
+                text.y = 40 + (index * 22);
             });
         }
 
-        const newLog = this.add.text(20, this.logTexts.length * 28 + 55, `• ${message}`, {
+        const newLog = this.add.text(15, this.logTexts.length * 22 + 40, `• ${message}`, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '16px',
+            fontSize: '12px',
             color: '#3d2914',
-            wordWrap: { width: 660 }
+            wordWrap: { width: 350 }
         });
 
         this.logTexts.push(newLog);
@@ -532,81 +525,81 @@ export class Battle extends Scene {
     }
 
     private createActionArea(): void {
-        this.actionContainer = this.add.container(0, SCREEN.HEIGHT - 340);
+        // Painel inferior principal
+        this.actionContainer = this.add.container(0, 520);
 
+        // Fundo estilo madeira/couro
         const actionBg = this.add.graphics();
-        actionBg.fillStyle(MEDIEVAL_THEME.leather, 0.96);
-        actionBg.fillRoundedRect(20, 0, SCREEN.WIDTH - 40, 330, 16);
-        actionBg.lineStyle(5, MEDIEVAL_THEME.gold, 1);
-        actionBg.strokeRoundedRect(20, 0, SCREEN.WIDTH - 40, 330, 16);
-        actionBg.lineStyle(3, MEDIEVAL_THEME.darkGold, 0.7);
-        actionBg.strokeRoundedRect(35, 15, SCREEN.WIDTH - 70, 300, 12);
+        actionBg.fillStyle(MEDIEVAL_THEME.leather, 0.95);
+        actionBg.fillRoundedRect(15, 0, 994, 240, 12);
+        actionBg.lineStyle(4, MEDIEVAL_THEME.gold, 1);
+        actionBg.strokeRoundedRect(15, 0, 994, 240, 12);
+        actionBg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.6);
+        actionBg.strokeRoundedRect(25, 10, 974, 220, 8);
         this.actionContainer.add(actionBg);
 
-        const ataquesTitle = this.add.text(220, 30, '⚔️ ATAQUES', {
+        // Título "Ações de Combate"
+        const ataquesTitle = this.add.text(160, 18, '⚔️ ATAQUES', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '26px',
+            fontSize: '18px',
             color: '#d4af37',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(0.5);
         this.actionContainer.add(ataquesTitle);
 
-        const cartasTitle = this.add.text(SCREEN.CENTER_X + 300, 30, '🃏 CARTAS DE SUPORTE', {
+        // Título "Cartas"
+        const cartasTitle = this.add.text(660, 18, '🃏 CARTAS DE SUPORTE', {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '26px',
+            fontSize: '18px',
             color: '#d4af37',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 2
         }).setOrigin(0.5);
         this.actionContainer.add(cartasTitle);
 
-        // Separador
+        // Separador decorativo vertical
         const separator = this.add.graphics();
-        separator.lineStyle(4, MEDIEVAL_THEME.gold, 0.9);
-        separator.lineBetween(460, 20, 460, 310);
+        separator.lineStyle(3, MEDIEVAL_THEME.gold, 0.8);
+        separator.lineBetween(330, 15, 330, 225);
         separator.fillStyle(MEDIEVAL_THEME.gold, 1);
-        separator.fillCircle(460, 20, 7);
-        separator.fillCircle(460, 310, 7);
+        separator.fillCircle(330, 15, 5);
+        separator.fillCircle(330, 225, 5);
         this.actionContainer.add(separator);
 
+        // Criar botões de ataque
         this.createAttackButtons();
 
-        this.cardsContainer = this.add.container(500, 65);
+        // Container para cartas - posição mais centralizada
+        this.cardsContainer = this.add.container(350, 45);
         this.actionContainer.add(this.cardsContainer);
         this.updateCards();
     }
 
     private createAttackButtons(): void {
-        // Limpar botões antigos
-        this.attackButtons.forEach(btn => btn.destroy());
-        this.attackButtons = [];
-
         // Ataque 1
         const atk1Btn = this.createActionButton(
-            220, 150, 
+            160, 125, 
             this.jogador.nomeAtaque1, 
             this.jogador.descricaoAtaque1,
             0,
             () => this.executeAttack(1)
         );
         this.actionContainer.add(atk1Btn);
-        this.attackButtons.push(atk1Btn);
 
         // Ataque 2
         const custoMana = this.jogador.custoManaAtaque2;
         const custoText = custoMana > 0 ? ` (${custoMana} 💧)` : '';
         const atk2Btn = this.createActionButton(
-            220, 250,
+            160, 200,
             this.jogador.nomeAtaque2 + custoText,
             this.jogador.descricaoAtaque2,
             custoMana,
             () => this.executeAttack(2)
         );
         this.actionContainer.add(atk2Btn);
-        this.attackButtons.push(atk2Btn);
     }
 
     private createActionButton(
@@ -618,66 +611,66 @@ export class Battle extends Scene {
         callback: () => void
     ): GameObjects.Container {
         const container = this.add.container(x, y);
-        const width = 380;
-        const height = 85;
+        const width = 260;
+        const height = 60;
 
+        // Verificar se tem mana suficiente
         const hasEnoughMana = manaCost === 0 || this.jogador.mana >= manaCost;
 
-        // Zona interativa com limites exatos
-        const hitZone = this.add.rectangle(0, 0, width, height, 0x000000, 0);
-        if (hasEnoughMana) {
-            hitZone.setInteractive({ useHandCursor: true });
-        }
-        container.add(hitZone);
-
+        // Fundo do botão estilo medieval
         const bg = this.add.graphics();
         bg.fillStyle(hasEnoughMana ? MEDIEVAL_THEME.darkLeather : 0x3a3a3a, 1);
-        bg.fillRoundedRect(-width/2, -height/2, width, height, 12);
-        bg.lineStyle(4, hasEnoughMana ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.iron, 1);
-        bg.strokeRoundedRect(-width/2, -height/2, width, height, 12);
+        bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
+        bg.lineStyle(3, hasEnoughMana ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.iron, 1);
+        bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
 
-        const titleText = this.add.text(0, -18, title, {
+        // Título do ataque
+        const titleText = this.add.text(0, -12, title, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '20px',
+            fontSize: '14px',
             color: hasEnoughMana ? '#d4af37' : '#888888',
             fontStyle: 'bold',
             align: 'center',
-            wordWrap: { width: width - 30 },
+            wordWrap: { width: width - 20 },
             stroke: '#000000',
-            strokeThickness: 2
+            strokeThickness: 1
         }).setOrigin(0.5);
 
-        const descText = this.add.text(0, 16, description, {
+        // Descrição
+        const descText = this.add.text(0, 12, description, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '14px',
+            fontSize: '11px',
             color: hasEnoughMana ? '#f4e4bc' : '#666666',
             align: 'center',
-            wordWrap: { width: width - 35 }
+            wordWrap: { width: width - 25 }
         }).setOrigin(0.5);
 
         container.add([bg, titleText, descText]);
+        container.setSize(width, height);
         
         if (hasEnoughMana) {
-            hitZone.on('pointerover', () => {
+            container.setInteractive({ useHandCursor: true });
+
+            container.on('pointerover', () => {
                 bg.clear();
                 bg.fillStyle(MEDIEVAL_THEME.wood, 1);
-                bg.fillRoundedRect(-width/2, -height/2, width, height, 12);
-                bg.lineStyle(4, 0xffd700, 1);
-                bg.strokeRoundedRect(-width/2, -height/2, width, height, 12);
-                container.setScale(1.03);
+                bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
+                bg.lineStyle(3, 0xffd700, 1);
+                bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
+                container.setScale(1.02);
             });
 
-            hitZone.on('pointerout', () => {
+            container.on('pointerout', () => {
                 bg.clear();
                 bg.fillStyle(MEDIEVAL_THEME.darkLeather, 1);
-                bg.fillRoundedRect(-width/2, -height/2, width, height, 12);
-                bg.lineStyle(4, MEDIEVAL_THEME.gold, 1);
-                bg.strokeRoundedRect(-width/2, -height/2, width, height, 12);
+                bg.fillRoundedRect(-width/2, -height/2, width, height, 8);
+                bg.lineStyle(3, MEDIEVAL_THEME.gold, 1);
+                bg.strokeRoundedRect(-width/2, -height/2, width, height, 8);
                 container.setScale(1);
             });
 
-            hitZone.on('pointerdown', () => {
-                if (!this.isAnimating && this.isPlayerTurn && !this.actionBlocked) {
+            container.on('pointerdown', () => {
+                if (!this.isAnimating && this.isPlayerTurn) {
                     callback();
                 }
             });
@@ -690,12 +683,13 @@ export class Battle extends Scene {
         this.cardsContainer.removeAll(true);
 
         const cards = this.jogador.inventario;
-        const cardWidth = 180;
-        const cardHeight = 210;
+        const cardWidth = 145;
+        const cardHeight = 170;
         const padding = 15;
 
+        // Centralizar as cartas
         const totalWidth = cards.length * (cardWidth + padding) - padding;
-        const startX = (SCREEN.WIDTH - 520 - totalWidth) / 2;
+        const startX = (640 - totalWidth) / 2;
 
         cards.forEach((card, index) => {
             const x = startX + index * (cardWidth + padding);
@@ -728,63 +722,65 @@ export class Battle extends Scene {
         const container = this.add.container(x + width/2, y + height/2);
         const rarityColor = RaridadeCores[card.raridade] || 0x888888;
 
-        // Zona interativa com limites exatos
-        const hitZone = this.add.rectangle(0, 0, width, height, 0x000000, 0);
-        hitZone.setInteractive({ useHandCursor: true });
-        container.add(hitZone);
-
+        // Sprite da carta como fundo
         const spriteKey = this.getCardSpriteKey(card.raridade);
         const cardSprite = this.add.image(0, 0, spriteKey);
         cardSprite.setDisplaySize(width, height);
 
+        // Overlay para legibilidade
         const overlay = this.add.graphics();
-        overlay.fillStyle(0x000000, 0.3);
-        overlay.fillRoundedRect(-width/2 + 10, -height/2 + 10, width - 20, height - 20, 8);
+        overlay.fillStyle(0x000000, 0.35);
+        overlay.fillRoundedRect(-width/2 + 8, -height/2 + 8, width - 16, height - 16, 6);
 
+        // Borda decorativa
         const border = this.add.graphics();
-        border.lineStyle(4, rarityColor, 1);
-        border.strokeRoundedRect(-width/2 + 6, -height/2 + 6, width - 12, height - 12, 10);
+        border.lineStyle(3, rarityColor, 1);
+        border.strokeRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height - 8, 8);
 
-        const rarityText = this.add.text(0, -height/2 + 22, card.raridade.toUpperCase(), {
+        // Raridade (topo)
+        const rarityText = this.add.text(0, -height/2 + 20, card.raridade.toUpperCase(), {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '12px',
+            fontSize: '10px',
             color: '#' + rarityColor.toString(16).padStart(6, '0'),
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 3
         }).setOrigin(0.5);
 
+        // Nome da carta
         const nameText = this.add.text(0, -height/2 + 50, card.nome, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '14px',
+            fontSize: '13px',
             color: '#ffffff',
             fontStyle: 'bold',
             align: 'center',
-            wordWrap: { width: width - 20 },
+            wordWrap: { width: width - 25 },
             stroke: '#000000',
             strokeThickness: 3
         }).setOrigin(0.5);
 
-        const descText = this.add.text(0, 20, card.descricao, {
+        // Descrição
+        const descText = this.add.text(0, 15, card.descricao, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '11px',
+            fontSize: '10px',
             color: '#f4e4bc',
             align: 'center',
-            wordWrap: { width: width - 20 },
+            wordWrap: { width: width - 25 },
             stroke: '#000000',
             strokeThickness: 2
         }).setOrigin(0.5);
 
         container.add([cardSprite, overlay, border, rarityText, nameText, descText]);
 
+        // Badge Mayhem especial
         if (card.isMayhem) {
             const mayhemGlow = this.add.graphics();
-            mayhemGlow.lineStyle(5, 0xff0000, 0.7);
-            mayhemGlow.strokeRoundedRect(-width/2, -height/2, width, height, 12);
+            mayhemGlow.lineStyle(4, 0xff0000, 0.6);
+            mayhemGlow.strokeRoundedRect(-width/2, -height/2, width, height, 10);
 
-            const mayhemBadge = this.add.text(0, height/2 - 25, '⚡ MAYHEM ⚡', {
+            const mayhemBadge = this.add.text(0, height/2 - 22, '⚡ MAYHEM ⚡', {
                 fontFamily: 'EightBitDragon, Georgia, serif',
-                fontSize: '12px',
+                fontSize: '11px',
                 color: '#ffff00',
                 fontStyle: 'bold',
                 stroke: '#ff0000',
@@ -793,6 +789,7 @@ export class Battle extends Scene {
             
             container.add([mayhemGlow, mayhemBadge]);
 
+            // Animação de brilho
             this.tweens.add({
                 targets: mayhemGlow,
                 alpha: 0.3,
@@ -802,29 +799,35 @@ export class Battle extends Scene {
             });
         }
 
+        // Área de clique - hitbox precisa
         container.setSize(width, height);
-
-        hitZone.on('pointerover', () => {
-            container.y = y + height/2 - 20;
-            container.setScale(1.12);
-            cardSprite.setTint(0xffffff);
-            border.clear();
-            border.lineStyle(5, 0xffd700, 1);
-            border.strokeRoundedRect(-width/2 + 6, -height/2 + 6, width - 12, height - 12, 10);
+        container.setInteractive({ 
+            useHandCursor: true,
+            hitArea: new Phaser.Geom.Rectangle(-width/2, -height/2, width, height),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains
         });
 
-        hitZone.on('pointerout', () => {
+        container.on('pointerover', () => {
+            container.y = y + height/2 - 15;
+            container.setScale(1.1);
+            cardSprite.setTint(0xffffff);
+            border.clear();
+            border.lineStyle(4, 0xffd700, 1);
+            border.strokeRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height - 8, 8);
+        });
+
+        container.on('pointerout', () => {
             container.y = y + height/2;
             container.setScale(1);
             cardSprite.clearTint();
             border.clear();
-            border.lineStyle(4, rarityColor, 1);
-            border.strokeRoundedRect(-width/2 + 6, -height/2 + 6, width - 12, height - 12, 10);
+            border.lineStyle(3, rarityColor, 1);
+            border.strokeRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height - 8, 8);
         });
 
-        hitZone.on('pointerdown', () => {
-            if (!this.isAnimating && this.isPlayerTurn && !this.actionBlocked) {
-                this.useCard(index, card);
+        container.on('pointerdown', () => {
+            if (!this.isAnimating && this.isPlayerTurn) {
+                this.useCard(index);
             }
         });
 
@@ -832,46 +835,39 @@ export class Battle extends Scene {
     }
 
     private startTurn(): void {
-        if (!this.arena.batalhaAtiva) return;
-
         const messages = this.arena.iniciarTurno();
         messages.forEach(msg => this.addLog(msg));
 
         this.isPlayerTurn = this.arena.turnoJogador1;
-        this.isAnimating = false;
-        this.actionBlocked = false;
-        
         this.updateStatusBars();
         this.updateCards();
-        this.createAttackButtons();
 
         if (!this.isPlayerTurn && this.arena.batalhaAtiva) {
-            this.actionBlocked = true;
-            this.time.delayedCall(TIMING.CPU_THINK_DELAY, () => this.cpuTurn());
+            // Turno da CPU - delay para feedback visual
+            this.time.delayedCall(1200, () => this.cpuTurn());
         }
     }
 
     private executeAttack(attackNumber: 1 | 2): void {
-        if (this.isAnimating || !this.isPlayerTurn || this.actionBlocked) return;
+        if (this.isAnimating || !this.isPlayerTurn) return;
 
         this.isAnimating = true;
-        this.actionBlocked = true;
 
         try {
             const result = this.arena.executarAtaque(attackNumber);
             this.addLog(result.mensagem);
             
+            // Atualizar status imediatamente após o ataque
             this.updateStatusBars();
             
+            // Escolher animação baseada no tipo de ação
             this.animateAction(true, result.tipo, () => {
                 this.updateStatusBars();
                 this.checkGameEnd();
                 
                 if (this.arena.batalhaAtiva) {
-                    this.time.delayedCall(TIMING.TURN_TRANSITION, () => {
-                        this.isAnimating = false;
-                        this.startTurn();
-                    });
+                    this.isAnimating = false;
+                    this.startTurn();
                 }
             });
         } catch (error) {
@@ -880,45 +876,33 @@ export class Battle extends Scene {
                 this.showMessage('⚠️ Mana Insuficiente!', 0xff4444);
             }
             this.isAnimating = false;
-            this.actionBlocked = false;
         }
     }
 
-    private useCard(index: number, card: IItem): void {
-        if (this.isAnimating || !this.isPlayerTurn || this.actionBlocked) return;
+    private useCard(index: number): void {
+        if (this.isAnimating || !this.isPlayerTurn) return;
 
         this.isAnimating = true;
-        this.actionBlocked = true;
 
-        // Efeito especial para cartas Mayhem
-        if (card.isMayhem) {
-            this.showMayhemEffect(card.nome, () => {
-                this.executeCardUse(index);
-            });
-        } else {
-            this.showMessage('🃏 Carta Usada!', MEDIEVAL_THEME.gold);
-            this.time.delayedCall(TIMING.ACTION_DELAY, () => {
-                this.executeCardUse(index);
-            });
-        }
-    }
-
-    private executeCardUse(index: number): void {
         try {
             const result = this.arena.usarCarta(index);
             this.addLog(result.mensagem);
             
+            // Efeito visual de uso de carta
+            this.showMessage('🃏 Carta Usada!', MEDIEVAL_THEME.gold);
+            
+            // Atualizar status e cartas imediatamente
             this.updateStatusBars();
             this.updateCards();
             
-            this.time.delayedCall(TIMING.MESSAGE_DURATION, () => {
+            // Animação baseada no tipo da carta
+            this.animateAction(true, result.tipo, () => {
+                this.updateStatusBars();
                 this.checkGameEnd();
 
                 if (this.arena.batalhaAtiva) {
-                    this.time.delayedCall(TIMING.TURN_TRANSITION, () => {
-                        this.isAnimating = false;
-                        this.startTurn();
-                    });
+                    this.isAnimating = false;
+                    this.startTurn();
                 }
             });
         } catch (error) {
@@ -927,146 +911,74 @@ export class Battle extends Scene {
                 this.showMessage(error.message, 0xff4444);
             }
             this.isAnimating = false;
-            this.actionBlocked = false;
         }
-    }
-
-    private showMayhemEffect(cardName: string, callback: () => void): void {
-        // Overlay vermelho pulsante
-        const overlay = this.add.graphics();
-        overlay.fillStyle(0xff0000, 0.4);
-        overlay.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
-
-        // Shake na câmera
-        this.cameras.main.shake(500, 0.02);
-
-        // Texto MAYHEM gigante
-        const mayhemText = this.add.text(SCREEN.CENTER_X, SCREEN.CENTER_Y - 100, '⚡ MAYHEM! ⚡', {
-            fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '80px',
-            color: '#ffff00',
-            fontStyle: 'bold',
-            stroke: '#ff0000',
-            strokeThickness: 10
-        }).setOrigin(0.5).setAlpha(0);
-
-        const cardNameText = this.add.text(SCREEN.CENTER_X, SCREEN.CENTER_Y + 20, cardName, {
-            fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '48px',
-            color: '#ffffff',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 6
-        }).setOrigin(0.5).setAlpha(0);
-
-        // Animação de entrada
-        this.tweens.add({
-            targets: [mayhemText, cardNameText],
-            alpha: 1,
-            scale: 1.2,
-            duration: 500,
-            ease: 'Power2'
-        });
-
-        // Flash vermelho pulsante
-        this.tweens.add({
-            targets: overlay,
-            alpha: 0.1,
-            duration: 200,
-            yoyo: true,
-            repeat: 4
-        });
-
-        // Limpar e executar callback
-        this.time.delayedCall(TIMING.MAYHEM_EFFECT, () => {
-            this.tweens.add({
-                targets: [overlay, mayhemText, cardNameText],
-                alpha: 0,
-                duration: 500,
-                onComplete: () => {
-                    overlay.destroy();
-                    mayhemText.destroy();
-                    cardNameText.destroy();
-                    callback();
-                }
-            });
-        });
     }
 
     private cpuTurn(): void {
         if (!this.arena.batalhaAtiva) return;
 
         this.isAnimating = true;
-        this.addLog('💀 CPU está pensando...');
 
-        this.time.delayedCall(TIMING.CPU_THINK_DELAY, () => {
-            const useCard = Math.random() < 0.25 && this.oponente.inventario.length > 0;
-            let actionType: 'dano' | 'buff' | 'cura' | 'neutro' = 'dano';
-            let cardUsed: IItem | null = null;
+        // IA simples: escolhe ação aleatória
+        const useCard = Math.random() < 0.3 && this.oponente.inventario.length > 0;
+        let actionType: 'dano' | 'buff' | 'cura' | 'neutro' = 'dano';
 
-            if (useCard) {
-                const cardIndex = Math.floor(Math.random() * this.oponente.inventario.length);
-                cardUsed = this.oponente.inventario[cardIndex];
-                
+        if (useCard) {
+            const cardIndex = Math.floor(Math.random() * this.oponente.inventario.length);
+            try {
+                const result = this.arena.usarCarta(cardIndex);
+                this.addLog(`💀 [CPU] ${result.mensagem}`);
+                actionType = result.tipo;
+            } catch {
+                // Se falhar ao usar carta, tentar atacar
                 try {
-                    const result = this.arena.usarCarta(cardIndex);
+                    const result = this.arena.executarAtaque(1);
                     this.addLog(`💀 [CPU] ${result.mensagem}`);
                     actionType = result.tipo;
                 } catch {
-                    try {
-                        const result = this.arena.executarAtaque(1);
-                        this.addLog(`💀 [CPU] ${result.mensagem}`);
-                        actionType = result.tipo;
-                    } catch {
-                        this.addLog(`💀 [CPU] não conseguiu agir!`);
-                        actionType = 'neutro';
-                    }
-                }
-            } else {
-                const attackNum = Math.random() < 0.5 ? 1 : 2;
-                try {
-                    const result = this.arena.executarAtaque(attackNum as 1 | 2);
-                    this.addLog(`💀 [CPU] ${result.mensagem}`);
-                    actionType = result.tipo;
-                } catch {
-                    try {
-                        const result = this.arena.executarAtaque(attackNum === 1 ? 2 : 1);
-                        this.addLog(`💀 [CPU] ${result.mensagem}`);
-                        actionType = result.tipo;
-                    } catch {
-                        this.addLog(`💀 [CPU] não conseguiu atacar!`);
-                        actionType = 'neutro';
-                    }
+                    // Pular turno se nada funcionar
+                    this.addLog(`💀 [CPU] não conseguiu agir!`);
+                    actionType = 'neutro';
                 }
             }
+        } else {
+            // Escolher ataque
+            const attackNum = Math.random() < 0.5 ? 1 : 2;
+            try {
+                const result = this.arena.executarAtaque(attackNum as 1 | 2);
+                this.addLog(`💀 [CPU] ${result.mensagem}`);
+                actionType = result.tipo;
+            } catch {
+                // Se falhar, tentar o outro ataque
+                try {
+                    const result = this.arena.executarAtaque(attackNum === 1 ? 2 : 1);
+                    this.addLog(`💀 [CPU] ${result.mensagem}`);
+                    actionType = result.tipo;
+                } catch {
+                    // Pular turno se nenhum ataque funcionar
+                    this.addLog(`💀 [CPU] não conseguiu atacar!`);
+                    actionType = 'neutro';
+                }
+            }
+        }
 
+        // Atualizar status imediatamente
+        this.updateStatusBars();
+
+        this.animateAction(false, actionType, () => {
             this.updateStatusBars();
+            this.checkGameEnd();
 
-            // Se usou carta Mayhem, mostrar efeito
-            if (cardUsed?.isMayhem) {
-                this.showMayhemEffect(cardUsed.nome, () => {
-                    this.finishCpuTurn(actionType);
-                });
-            } else {
-                this.animateAction(false, actionType, () => {
-                    this.finishCpuTurn(actionType);
-                });
+            if (this.arena.batalhaAtiva) {
+                this.isAnimating = false;
+                this.startTurn();
             }
         });
     }
 
-    private finishCpuTurn(_actionType: 'dano' | 'buff' | 'cura' | 'neutro'): void {
-        this.updateStatusBars();
-        this.checkGameEnd();
-
-        if (this.arena.batalhaAtiva) {
-            this.time.delayedCall(TIMING.TURN_TRANSITION, () => {
-                this.isAnimating = false;
-                this.startTurn();
-            });
-        }
-    }
-
+    /**
+     * Anima uma ação baseada no tipo (dano, buff, cura, neutro)
+     */
     private animateAction(isPlayer: boolean, actionType: 'dano' | 'buff' | 'cura' | 'neutro', callback: () => void): void {
         switch (actionType) {
             case 'dano':
@@ -1085,177 +997,203 @@ export class Battle extends Scene {
         }
     }
 
+    /**
+     * Animação de ataque com dano (projétil)
+     */
     private animateAttack(isPlayer: boolean, callback: () => void): void {
-        const startX = isPlayer ? 380 : SCREEN.WIDTH - 380;
-        const endX = isPlayer ? SCREEN.WIDTH - 380 : 380;
-        const startY = isPlayer ? 520 : 420;
-        const endY = isPlayer ? 420 : 520;
+        const startX = isPlayer ? 200 : 824;
+        const endX = isPlayer ? 824 : 200;
+        const startY = isPlayer ? 380 : 300;
+        const endY = isPlayer ? 300 : 380;
 
+        // Projétil mais elaborado
         const projectile = this.add.graphics();
         projectile.fillStyle(isPlayer ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 1);
-        projectile.fillCircle(0, 0, 18);
-        projectile.lineStyle(4, 0xffffff, 0.9);
-        projectile.strokeCircle(0, 0, 18);
+        projectile.fillCircle(0, 0, 12);
+        projectile.lineStyle(3, 0xffffff, 0.8);
+        projectile.strokeCircle(0, 0, 12);
         projectile.setPosition(startX, startY);
 
+        // Trilha de partículas
         this.tweens.add({
             targets: projectile,
             x: endX,
             y: endY,
-            duration: TIMING.ANIMATION_DURATION,
+            duration: 400,
             ease: 'Power2',
             onComplete: () => {
-                this.cameras.main.shake(200, 0.02);
+                // Efeito de impacto
+                this.cameras.main.shake(150, 0.015);
                 
-                const impact = this.add.circle(endX, endY, 40, isPlayer ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 0.9);
+                // Flash no alvo
+                const impact = this.add.circle(endX, endY, 30, isPlayer ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood, 0.8);
                 this.tweens.add({
                     targets: impact,
-                    scale: 2.5,
+                    scale: 2,
                     alpha: 0,
-                    duration: 400,
+                    duration: 300,
                     onComplete: () => impact.destroy()
                 });
 
                 projectile.destroy();
-                
-                this.time.delayedCall(TIMING.ACTION_DELAY, callback);
+                callback();
             }
         });
     }
 
+    /**
+     * Animação de buff (aura subindo no próprio personagem)
+     */
     private animateBuff(isPlayer: boolean, callback: () => void): void {
-        const x = isPlayer ? 380 : SCREEN.WIDTH - 380;
-        const y = isPlayer ? 520 : 420;
+        const x = isPlayer ? 200 : 824;
+        const y = isPlayer ? 380 : 300;
 
+        // Criar múltiplas partículas subindo
         const particles: Phaser.GameObjects.Graphics[] = [];
-        const colors = [0x4169e1, 0x6495ed, 0x87ceeb];
+        const colors = [0x4169e1, 0x6495ed, 0x87ceeb]; // Tons de azul
 
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 8; i++) {
             const particle = this.add.graphics();
             const color = colors[i % colors.length];
-            particle.fillStyle(color, 0.85);
-            particle.fillCircle(0, 0, 8 + Math.random() * 5);
-            particle.setPosition(x + (Math.random() - 0.5) * 80, y + 40);
+            particle.fillStyle(color, 0.8);
+            particle.fillCircle(0, 0, 6 + Math.random() * 4);
+            particle.setPosition(x + (Math.random() - 0.5) * 60, y + 30);
             particles.push(particle);
 
+            // Animação individual com delay
             this.tweens.add({
                 targets: particle,
-                y: y - 120 - Math.random() * 60,
+                y: y - 80 - Math.random() * 40,
                 alpha: 0,
-                scale: 0.4,
-                duration: 800 + Math.random() * 500,
-                delay: i * 100,
+                scale: 0.5,
+                duration: 600 + Math.random() * 400,
+                delay: i * 80,
                 ease: 'Power1',
                 onComplete: () => particle.destroy()
             });
         }
 
+        // Círculo de aura ao redor do personagem
         const aura = this.add.graphics();
-        aura.lineStyle(5, 0x4169e1, 0.9);
-        aura.strokeCircle(x, y - 10, 70);
+        aura.lineStyle(4, 0x4169e1, 0.8);
+        aura.strokeCircle(x, y - 10, 50);
         
         this.tweens.add({
             targets: aura,
-            scale: 1.6,
+            scale: 1.5,
             alpha: 0,
-            duration: 800,
+            duration: 600,
             ease: 'Power2',
             onComplete: () => {
                 aura.destroy();
-                this.time.delayedCall(TIMING.ACTION_DELAY, callback);
+                callback();
             }
         });
 
-        this.showMessage('✨ Buff Ativado!', 0x4169e1);
+        // Mensagem visual
+        this.showMessage('✨ Buff!', 0x4169e1);
     }
 
+    /**
+     * Animação de cura (partículas verdes subindo)
+     */
     private animateHeal(isPlayer: boolean, callback: () => void): void {
-        const x = isPlayer ? 380 : SCREEN.WIDTH - 380;
-        const y = isPlayer ? 520 : 420;
+        const x = isPlayer ? 200 : 824;
+        const y = isPlayer ? 380 : 300;
 
+        // Criar partículas verdes de cura
         const particles: Phaser.GameObjects.Graphics[] = [];
-        const colors = [0x228b22, 0x32cd32, 0x00ff7f];
+        const colors = [0x228b22, 0x32cd32, 0x00ff7f]; // Tons de verde
 
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 12; i++) {
             const particle = this.add.graphics();
             const color = colors[i % colors.length];
             particle.fillStyle(color, 0.9);
-            particle.fillRect(-5, -1.5, 10, 3);
-            particle.fillRect(-1.5, -5, 3, 10);
             
-            particle.setPosition(x + (Math.random() - 0.5) * 100, y + 50);
+            // Forma de cruz/plus para cura
+            particle.fillRect(-4, -1, 8, 2);
+            particle.fillRect(-1, -4, 2, 8);
+            
+            particle.setPosition(x + (Math.random() - 0.5) * 80, y + 40);
             particles.push(particle);
 
+            // Animação individual com delay
             this.tweens.add({
                 targets: particle,
-                y: y - 140 - Math.random() * 70,
+                y: y - 100 - Math.random() * 50,
                 alpha: 0,
                 rotation: Math.PI * 2,
-                duration: 1000 + Math.random() * 500,
-                delay: i * 70,
+                duration: 800 + Math.random() * 400,
+                delay: i * 60,
                 ease: 'Sine.easeOut',
                 onComplete: () => particle.destroy()
             });
         }
 
+        // Círculo de cura ao redor do personagem
         const healAura = this.add.graphics();
-        healAura.fillStyle(0x228b22, 0.35);
-        healAura.fillCircle(x, y - 10, 75);
-        healAura.lineStyle(4, 0x32cd32, 0.9);
-        healAura.strokeCircle(x, y - 10, 75);
+        healAura.fillStyle(0x228b22, 0.3);
+        healAura.fillCircle(x, y - 10, 55);
+        healAura.lineStyle(3, 0x32cd32, 0.8);
+        healAura.strokeCircle(x, y - 10, 55);
         
         this.tweens.add({
             targets: healAura,
-            scale: 1.4,
+            scale: 1.3,
             alpha: 0,
-            duration: 900,
+            duration: 700,
             ease: 'Power2',
             onComplete: () => {
                 healAura.destroy();
-                this.time.delayedCall(TIMING.ACTION_DELAY, callback);
+                callback();
             }
         });
 
-        this.showMessage('💚 Cura Aplicada!', 0x228b22);
+        // Mensagem visual
+        this.showMessage('💚 Cura!', 0x228b22);
     }
 
+    /**
+     * Animação neutra (efeito sutil de energia)
+     */
     private animateNeutral(isPlayer: boolean, callback: () => void): void {
-        const x = isPlayer ? 380 : SCREEN.WIDTH - 380;
-        const y = isPlayer ? 520 : 420;
+        const x = isPlayer ? 200 : 824;
+        const y = isPlayer ? 380 : 300;
 
+        // Efeito de energia sutil
         const energy = this.add.graphics();
-        energy.lineStyle(4, 0xd4af37, 0.7);
-        energy.strokeCircle(x, y - 10, 55);
+        energy.lineStyle(3, 0xd4af37, 0.6);
+        energy.strokeCircle(x, y - 10, 40);
         
         this.tweens.add({
             targets: energy,
-            scale: 1.3,
+            scale: 1.2,
             alpha: 0,
-            duration: 500,
+            duration: 400,
             ease: 'Power1',
             onComplete: () => {
                 energy.destroy();
-                this.time.delayedCall(TIMING.ACTION_DELAY, callback);
+                callback();
             }
         });
     }
 
     private showMessage(text: string, color: number): void {
-        const message = this.add.text(SCREEN.CENTER_X, SCREEN.CENTER_Y - 50, text, {
+        const message = this.add.text(512, 320, text, {
             fontFamily: 'EightBitDragon, Georgia, serif',
-            fontSize: '52px',
+            fontSize: '36px',
             color: '#' + color.toString(16).padStart(6, '0'),
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 6
+            strokeThickness: 5
         }).setOrigin(0.5);
 
         this.tweens.add({
             targets: message,
             alpha: 0,
-            y: SCREEN.CENTER_Y - 120,
-            scale: 1.3,
-            duration: TIMING.MESSAGE_DURATION,
+            y: 270,
+            scale: 1.2,
+            duration: 1800,
             ease: 'Power2',
             onComplete: () => message.destroy()
         });
@@ -1266,12 +1204,13 @@ export class Battle extends Scene {
             const vencedor = this.arena.vencedor;
             const jogadorVenceu = vencedor === this.jogador;
 
+            // Mensagem dramática
             const endText = jogadorVenceu ? '🏆 VITÓRIA! 🏆' : '💀 DERROTA 💀';
             const endColor = jogadorVenceu ? MEDIEVAL_THEME.gold : MEDIEVAL_THEME.blood;
             
             this.showMessage(endText, endColor);
 
-            this.time.delayedCall(3500, () => {
+            this.time.delayedCall(2000, () => {
                 this.scene.start('GameOver', {
                     vencedor: vencedor?.nome || 'Desconhecido',
                     jogadorVenceu,

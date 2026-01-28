@@ -59,12 +59,6 @@ export class Guerreiro extends Personagem {
             throw new PersonagemMortoError(alvo.nome);
         }
 
-        // Resetar disponibilidade do Golpe Brutal
-        if (this._usouGolpeBrutalUltimoTurno) {
-            this._golpeBrutalDisponivel = true;
-            this._usouGolpeBrutalUltimoTurno = false;
-        }
-
         const dano = 18;
         alvo.receberDano(dano);
 

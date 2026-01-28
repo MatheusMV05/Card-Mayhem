@@ -28,6 +28,7 @@ interface ClasseInfo {
     descricao: string;
     cor: number;
     icone: string;
+    spriteKey: string;
     factory: (nome: string) => Personagem;
 }
 
@@ -36,8 +37,6 @@ interface ClasseInfo {
  */
 export class CharacterSelect extends Scene {
     private classes: ClasseInfo[] = [];
-    private previewContainer!: GameObjects.Container;
-    private selectedClass: ClasseInfo | null = null;
 
     constructor() {
         super('CharacterSelect');
@@ -55,6 +54,7 @@ export class CharacterSelect extends Scene {
                 descricao: 'Mestre da espada com alta resistência. Não depende de mana, usa pura força bruta.',
                 cor: 0xb22222,
                 icone: '⚔️',
+                spriteKey: 'sprite-guerreiro',
                 factory: (nome: string) => new Guerreiro(nome)
             },
             {
@@ -66,6 +66,7 @@ export class CharacterSelect extends Scene {
                 descricao: 'Arquimago dominador das chamas. Frágil mas devastador.',
                 cor: 0x4169e1,
                 icone: '🔮',
+                spriteKey: 'sprite-mago',
                 factory: (nome: string) => new Mago(nome)
             },
             {
@@ -77,6 +78,7 @@ export class CharacterSelect extends Scene {
                 descricao: 'Atirador de elite com olhos de águia. Equilíbrio entre dano e sobrevivência.',
                 cor: 0x228b22,
                 icone: '🏹',
+                spriteKey: 'sprite-arqueiro',
                 factory: (nome: string) => new Arqueiro(nome)
             },
             {
@@ -88,6 +90,7 @@ export class CharacterSelect extends Scene {
                 descricao: 'Cavaleiro sagrado protetor dos inocentes. Sustentação e defesa.',
                 cor: 0xffd700,
                 icone: '🛡️',
+                spriteKey: 'sprite-paladino',
                 factory: (nome: string) => new Paladino(nome)
             },
             {
@@ -99,6 +102,7 @@ export class CharacterSelect extends Scene {
                 descricao: 'Senhor das trevas que comanda a morte. Alto risco, alta recompensa.',
                 cor: 0x800080,
                 icone: '💀',
+                spriteKey: 'sprite-necromante',
                 factory: (nome: string) => new Necromante(nome)
             },
             {
@@ -110,6 +114,7 @@ export class CharacterSelect extends Scene {
                 descricao: 'Tecelão de feitiços ancestrais. Ignora defesas com magia pura.',
                 cor: 0x9400d3,
                 icone: '✨',
+                spriteKey: 'sprite-feiticeiro',
                 factory: (nome: string) => new Feiticeiro(nome)
             }
         ];
@@ -125,10 +130,6 @@ export class CharacterSelect extends Scene {
         // Cards das classes
         this.createClassCards();
 
-        // Container de preview detalhado
-        this.previewContainer = this.add.container(512, 620);
-        this.previewContainer.setVisible(false);
-
         // Botão Voltar
         this.createBackButton();
     }
@@ -136,51 +137,50 @@ export class CharacterSelect extends Scene {
     private createBackground(): void {
         // Tentar usar o bg.png se existir
         try {
-            const bg = this.add.image(512, 384, 'bg');
-            bg.setDisplaySize(1024, 768);
+            const bg = this.add.image(960, 540, 'bg');
+            bg.setDisplaySize(1920, 1080);
         } catch {
             // Fallback para gradiente
             const graphics = this.add.graphics();
             graphics.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1);
-            graphics.fillRect(0, 0, 1024, 768);
+            graphics.fillRect(0, 0, 1920, 1080);
         }
 
-        // Overlay escuro
+        // Overlay mais leve
         const overlay = this.add.graphics();
-        overlay.fillStyle(0x000000, 0.5);
-        overlay.fillRect(0, 0, 1024, 768);
+        overlay.fillStyle(0x000000, 0.3);
+        overlay.fillRect(0, 0, 1920, 1080);
     }
 
     private createTitle(): void {
-        // Banner do título
-        const titleBanner = this.add.graphics();
-        titleBanner.fillStyle(MEDIEVAL_THEME.leather, 0.95);
-        titleBanner.fillRoundedRect(212, 20, 600, 80, 10);
-        titleBanner.lineStyle(4, MEDIEVAL_THEME.gold, 1);
-        titleBanner.strokeRoundedRect(212, 20, 600, 80, 10);
-        titleBanner.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.7);
-        titleBanner.strokeRoundedRect(222, 30, 580, 60, 6);
-
-        this.add.text(512, 60, '⚔️ ESCOLHA SEU CAMPEÃO ⚔️', {
-            fontFamily: 'Georgia, serif',
-            fontSize: '32px',
+        // Título simples sem banner
+        this.add.text(960, 40, 'ESCOLHA SEU CAMPEÃO', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '48px',
             color: '#d4af37',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 5
         }).setOrigin(0.5);
     }
 
     private createClassCards(): void {
-        const startX = 85;
-        const startY = 140;
-        const cardWidth = 150;
-        const cardHeight = 280;
-        const padding = 12;
+        // Layout: 3 cards em cima, 3 embaixo - usando mais espaço
+        const cardWidth = 380;
+        const cardHeight = 380;
+        const paddingX = 40;
+        const paddingY = 25;
+        const startY = 75;
+
+        // Calcular posição X para centralizar 3 cards
+        const rowWidth = (cardWidth * 3) + (paddingX * 2);
+        const startX = (1920 - rowWidth) / 2;
 
         this.classes.forEach((classe, index) => {
-            const x = startX + (index * (cardWidth + padding));
-            const y = startY;
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const x = startX + (col * (cardWidth + paddingX));
+            const y = startY + (row * (cardHeight + paddingY));
             this.createClassCard(x, y, cardWidth, cardHeight, classe);
         });
     }
@@ -194,223 +194,111 @@ export class CharacterSelect extends Scene {
     ): GameObjects.Container {
         const container = this.add.container(x, y);
 
-        // Fundo do card estilo pergaminho
-        const bg = this.add.graphics();
-        bg.fillStyle(MEDIEVAL_THEME.parchment, 0.95);
-        bg.fillRoundedRect(0, 0, width, height, 12);
-        bg.lineStyle(4, classe.cor, 1);
-        bg.strokeRoundedRect(0, 0, width, height, 12);
-        bg.lineStyle(2, MEDIEVAL_THEME.darkParchment, 0.8);
-        bg.strokeRoundedRect(6, 6, width - 12, height - 12, 8);
+        // Zona interativa com limites exatos do card
+        const hitZone = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0);
+        hitZone.setInteractive({ useHandCursor: true });
+        container.add(hitZone);
 
-        // Ícone grande da classe
+        // Fundo do card limpo
+        const bg = this.add.graphics();
+        bg.fillStyle(MEDIEVAL_THEME.parchment, 0.92);
+        bg.fillRoundedRect(0, 0, width, height, 8);
+        bg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.5);
+        bg.strokeRoundedRect(0, 0, width, height, 8);
+
+        // Layout horizontal: sprite à esquerda, info à direita
+        const spriteX = 70;
+        const infoX = 150;
+
+        // Fundo do sprite
         const iconBg = this.add.graphics();
         iconBg.fillStyle(classe.cor, 0.2);
-        iconBg.fillCircle(width / 2, 55, 40);
-        iconBg.lineStyle(3, classe.cor, 1);
-        iconBg.strokeCircle(width / 2, 55, 40);
+        iconBg.fillCircle(spriteX, 85, 55);
 
-        const icon = this.add.text(width / 2, 55, classe.icone, {
-            fontSize: '40px'
-        }).setOrigin(0.5);
+        // Sprite animado do personagem
+        const animKey = classe.spriteKey.replace('sprite-', '') + '-idle';
+        const sprite = this.add.sprite(spriteX, 85, classe.spriteKey)
+            .setOrigin(0.5)
+            .setScale(5) // 16x16 -> 80x80
+            .play(animKey);
 
         // Nome da classe
-        const nome = this.add.text(width / 2, 115, classe.nome, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '16px',
-            color: '#' + classe.cor.toString(16).padStart(6, '0'),
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 1
-        }).setOrigin(0.5);
-
-        // Linha separadora
-        const separator = this.add.graphics();
-        separator.lineStyle(2, classe.cor, 0.5);
-        separator.lineBetween(15, 135, width - 15, 135);
-
-        // Stats
-        const statsText = this.add.text(width / 2, 160, 
-            `❤️ ${classe.vida}\n💧 ${classe.mana}`, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '14px',
-            color: '#3d2914',
-            align: 'center',
-            lineSpacing: 8
-        }).setOrigin(0.5);
-
-        // Ataques resumidos
-        const ataquesText = this.add.text(width / 2, 220, 
-            `⚔️ ${classe.ataque1.split('(')[0].trim()}\n🔥 ${classe.ataque2.split('(')[0].trim()}`, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '10px',
-            color: '#5c3317',
-            align: 'center',
-            lineSpacing: 4,
-            wordWrap: { width: width - 20 }
-        }).setOrigin(0.5);
-
-        // Botão "Escolher"
-        const btnY = height - 30;
-        const btnBg = this.add.graphics();
-        btnBg.fillStyle(classe.cor, 1);
-        btnBg.fillRoundedRect(15, btnY - 15, width - 30, 28, 6);
-
-        const btnText = this.add.text(width / 2, btnY, 'ESCOLHER', {
-            fontFamily: 'Georgia, serif',
-            fontSize: '12px',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-
-        container.add([bg, iconBg, icon, nome, separator, statsText, ataquesText, btnBg, btnText]);
-        container.setSize(width, height);
-        container.setInteractive({ 
-            useHandCursor: true,
-            hitArea: new Phaser.Geom.Rectangle(0, 0, width, height),
-            hitAreaCallback: Phaser.Geom.Rectangle.Contains
-        });
-
-        // Eventos de hover
-        container.on('pointerover', () => {
-            this.showPreview(classe);
-            this.tweens.add({
-                targets: container,
-                y: y - 15,
-                scaleX: 1.05,
-                scaleY: 1.05,
-                duration: 200,
-                ease: 'Power2'
-            });
-            
-            // Destacar borda
-            bg.clear();
-            bg.fillStyle(MEDIEVAL_THEME.parchment, 1);
-            bg.fillRoundedRect(0, 0, width, height, 12);
-            bg.lineStyle(5, MEDIEVAL_THEME.gold, 1);
-            bg.strokeRoundedRect(0, 0, width, height, 12);
-            bg.lineStyle(2, classe.cor, 1);
-            bg.strokeRoundedRect(6, 6, width - 12, height - 12, 8);
-        });
-
-        container.on('pointerout', () => {
-            this.previewContainer.setVisible(false);
-            this.tweens.add({
-                targets: container,
-                y: y,
-                scaleX: 1,
-                scaleY: 1,
-                duration: 200,
-                ease: 'Power2'
-            });
-            
-            // Restaurar borda
-            bg.clear();
-            bg.fillStyle(MEDIEVAL_THEME.parchment, 0.95);
-            bg.fillRoundedRect(0, 0, width, height, 12);
-            bg.lineStyle(4, classe.cor, 1);
-            bg.strokeRoundedRect(0, 0, width, height, 12);
-            bg.lineStyle(2, MEDIEVAL_THEME.darkParchment, 0.8);
-            bg.strokeRoundedRect(6, 6, width - 12, height - 12, 8);
-        });
-
-        container.on('pointerdown', () => {
-            this.selectClass(classe);
-        });
-
-        return container;
-    }
-
-    private showPreview(classe: ClasseInfo): void {
-        this.previewContainer.removeAll(true);
-        this.selectedClass = classe;
-
-        // Fundo do preview estilo pergaminho grande
-        const bg = this.add.graphics();
-        bg.fillStyle(MEDIEVAL_THEME.leather, 0.95);
-        bg.fillRoundedRect(-450, -70, 900, 140, 12);
-        bg.lineStyle(4, MEDIEVAL_THEME.gold, 1);
-        bg.strokeRoundedRect(-450, -70, 900, 140, 12);
-        bg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.6);
-        bg.strokeRoundedRect(-440, -60, 880, 120, 8);
-
-        // Ícone e nome
-        const icon = this.add.text(-420, -40, classe.icone, {
-            fontSize: '50px'
-        });
-
-        const nome = this.add.text(-350, -45, classe.nome.toUpperCase(), {
-            fontFamily: 'Georgia, serif',
+        const nome = this.add.text(infoX, 20, classe.nome.toUpperCase(), {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '28px',
             color: '#' + classe.cor.toString(16).padStart(6, '0'),
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 2
+            strokeThickness: 3
         });
 
-        // Descrição
-        const descricao = this.add.text(-350, -10, classe.descricao, {
-            fontFamily: 'Georgia, serif',
+        // Descrição COMPLETA
+        const descricao = this.add.text(infoX, 55, classe.descricao, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '14px',
-            color: '#f4e4bc',
-            wordWrap: { width: 350 }
+            color: '#5c3317',
+            wordWrap: { width: width - infoX - 15 }
         });
 
-        // Stats detalhados
-        const statsBox = this.add.graphics();
-        statsBox.fillStyle(0x000000, 0.3);
-        statsBox.fillRoundedRect(50, -55, 180, 110, 8);
+        // Stats em linha
+        const statsText = this.add.text(infoX, 130, 
+            `❤️ ${classe.vida}    💧 ${classe.mana}`, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '20px',
+            color: '#3d2914'
+        });
 
-        const stats = this.add.text(140, -45, 
-            `❤️ Vida: ${classe.vida}\n💧 Mana: ${classe.mana}\n\n⚔️ ${classe.ataque1}\n🔥 ${classe.ataque2}`, {
-            fontFamily: 'Georgia, serif',
-            fontSize: '12px',
-            color: '#ffffff',
-            lineSpacing: 6
-        }).setOrigin(0.5, 0);
+        // Linha separadora
+        const separator = this.add.graphics();
+        separator.lineStyle(2, MEDIEVAL_THEME.darkParchment, 0.5);
+        separator.lineBetween(20, 175, width - 20, 175);
 
-        // Botão confirmar
-        const confirmBtn = this.add.graphics();
-        confirmBtn.fillStyle(classe.cor, 1);
-        confirmBtn.fillRoundedRect(280, -45, 150, 90, 10);
-        confirmBtn.lineStyle(3, MEDIEVAL_THEME.gold, 1);
-        confirmBtn.strokeRoundedRect(280, -45, 150, 90, 10);
+        // Ataques completos
+        const ataquesText = this.add.text(20, 190, 
+            `⚔️ ${classe.ataque1}\n🔥 ${classe.ataque2}`, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '18px',
+            color: '#3d2914',
+            lineSpacing: 10,
+            wordWrap: { width: width - 40 }
+        });
 
-        const confirmText = this.add.text(355, 0, '⚔️\nCOMBATER!', {
-            fontFamily: 'Georgia, serif',
+        // Indicador "Clique para selecionar" no lugar do botão
+        const hintText = this.add.text(width / 2, height - 25, '👆 Clique para selecionar', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '16px',
-            color: '#ffffff',
-            fontStyle: 'bold',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 2
+            color: '#8b7355',
+            fontStyle: 'italic'
         }).setOrigin(0.5);
 
-        // Tornar botão clicável
-        const confirmHitArea = this.add.rectangle(355, 0, 150, 90, 0x000000, 0);
-        confirmHitArea.setInteractive({ useHandCursor: true });
-        confirmHitArea.on('pointerdown', () => {
-            if (this.selectedClass) {
-                this.selectClass(this.selectedClass);
-            }
-        });
-        confirmHitArea.on('pointerover', () => {
-            confirmBtn.clear();
-            confirmBtn.fillStyle(MEDIEVAL_THEME.gold, 1);
-            confirmBtn.fillRoundedRect(280, -45, 150, 90, 10);
-            confirmBtn.lineStyle(3, 0xffffff, 1);
-            confirmBtn.strokeRoundedRect(280, -45, 150, 90, 10);
-        });
-        confirmHitArea.on('pointerout', () => {
-            confirmBtn.clear();
-            confirmBtn.fillStyle(classe.cor, 1);
-            confirmBtn.fillRoundedRect(280, -45, 150, 90, 10);
-            confirmBtn.lineStyle(3, MEDIEVAL_THEME.gold, 1);
-            confirmBtn.strokeRoundedRect(280, -45, 150, 90, 10);
+        container.add([bg, iconBg, sprite, nome, descricao, statsText, separator, ataquesText, hintText]);
+
+        // Eventos de hover na zona interativa (hitZone já é interativo)
+        hitZone.on('pointerover', () => {
+            // Destacar com borda dourada
+            bg.clear();
+            bg.fillStyle(MEDIEVAL_THEME.parchment, 1);
+            bg.fillRoundedRect(0, 0, width, height, 8);
+            bg.lineStyle(4, MEDIEVAL_THEME.gold, 1);
+            bg.strokeRoundedRect(0, 0, width, height, 8);
+            container.setScale(1.02);
         });
 
-        this.previewContainer.add([bg, icon, nome, descricao, statsBox, stats, confirmBtn, confirmText, confirmHitArea]);
-        this.previewContainer.setVisible(true);
+        hitZone.on('pointerout', () => {
+            // Restaurar estilo normal
+            bg.clear();
+            bg.fillStyle(MEDIEVAL_THEME.parchment, 0.92);
+            bg.fillRoundedRect(0, 0, width, height, 8);
+            bg.lineStyle(2, MEDIEVAL_THEME.darkGold, 0.5);
+            bg.strokeRoundedRect(0, 0, width, height, 8);
+            container.setScale(1);
+        });
+
+        hitZone.on('pointerdown', () => {
+            this.selectClass(classe);
+        });
+
+        return container;
     }
 
     private selectClass(classe: ClasseInfo): void {
@@ -418,8 +306,8 @@ export class CharacterSelect extends Scene {
         this.cameras.main.flash(400, 255, 215, 0);
         
         // Som de confirmação (visual)
-        const selectText = this.add.text(512, 384, `⚔️ ${classe.nome.toUpperCase()} ⚔️`, {
-            fontFamily: 'Georgia, serif',
+        const selectText = this.add.text(960, 540, `⚔️ ${classe.nome.toUpperCase()} ⚔️`, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '48px',
             color: '#d4af37',
             fontStyle: 'bold',
@@ -464,7 +352,7 @@ export class CharacterSelect extends Scene {
         btnBg.strokeRoundedRect(-60, -25, 120, 50, 8);
 
         const btnText = this.add.text(0, 0, '← Voltar', {
-            fontFamily: 'Georgia, serif',
+            fontFamily: 'EightBitDragon, Georgia, serif',
             fontSize: '18px',
             color: '#d4af37',
             fontStyle: 'bold'
