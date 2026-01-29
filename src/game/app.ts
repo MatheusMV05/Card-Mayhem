@@ -1,5 +1,5 @@
 /**
- * Card Mayhem - RPG Arena Battle
+ * Card Mayhem - Demonstração do Sistema
  * 
  * Requsitos que este arquivo demonstra:
  * 1. Criação de personagens de diferentes classes
