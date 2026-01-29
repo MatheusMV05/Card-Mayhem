@@ -41,7 +41,7 @@
 ### Caracteristicas Principais
 
 - **6 Classes Unicas** - Guerreiro, Mago, Arqueiro, Paladino, Necromante e Feiticeiro
-- **50+ Cartas de Suporte** - De comuns a lendarias, incluindo as devastadoras cartas Mayhem
+- **32 Cartas de Suporte** - De comuns a lendarias, incluindo as devastadoras cartas Mayhem
 - **Combate Estrategico** - Sistema de turnos com ataques, habilidades e cartas
 - **Trilha Sonora Imersiva** - Musicas tematicas para cada momento do jogo
 - **Visual Medieval** - Interface tematica com fonte pixel art 8-bit
