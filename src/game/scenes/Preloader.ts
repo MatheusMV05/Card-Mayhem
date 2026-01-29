@@ -55,6 +55,14 @@ export class Preloader extends Scene {
         this.load.spritesheet('sprite-paladino', 'Paladino.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('sprite-necromante', 'Necromante.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('sprite-feiticeiro', 'Feiticeiro.png', { frameWidth: 16, frameHeight: 16 });
+
+        // Carregar músicas
+        this.load.audio('menu-theme', 'MenuTheme.wav');
+        this.load.audio('battle-intro', 'BatttleThemeIntro.ogg');
+        this.load.audio('battle-loop', 'BattleThemeLoop.ogg');
+        this.load.audio('victory-theme', 'VictoryTheme.wav');
+        this.load.audio('gameover-theme', 'GameOverTheme.wav');
+        this.load.audio('exodia-theme', 'ExodiaTheme.wav');
     }
 
     create() {

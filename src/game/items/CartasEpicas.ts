@@ -1,23 +1,6 @@
-import { IItem, IEfeitoPersistente } from '../interfaces';
+import { IItem } from '../interfaces';
 import { Raridade } from '../enums';
 import { Personagem } from '../entities/Personagem';
-
-/**
- * Efeito da Coroa de Espinhos
- */
-class EfeitoCoroaEspinhos implements IEfeitoPersistente {
-    nome = 'Coroa de Espinhos';
-    duracao: number;
-
-    constructor(duracao: number = 3) {
-        this.duracao = duracao;
-    }
-
-    aplicar(personagem: Personagem): string {
-        personagem.receberDanoDireto(5);
-        return `${personagem.nome} perdeu 5 HP pela Coroa de Espinhos!`;
-    }
-}
 
 /**
  * Livro de Feitiços Proibidos - Reduz o HP do oponente pela metade (limitado a 1x por alvo)
@@ -27,21 +10,25 @@ export class LivroDeFeiticosProibidos implements IItem {
     descricao = 'Reduz o HP do oponente pela metade (limitado a 1x por alvo).';
     raridade = Raridade.Epico;
     isMayhem = false;
-    private alvosAfetados: Set<string> = new Set();
+    private static alvosAfetados: Set<string> = new Set();
 
     usar(usuario: Personagem, alvo?: Personagem): string {
         if (alvo) {
-            if (this.alvosAfetados.has(alvo.nome)) {
+            if (LivroDeFeiticosProibidos.alvosAfetados.has(alvo.nome)) {
                 return `O Livro de Feitiços Proibidos já foi usado em ${alvo.nome}!`;
             }
             
             const dano = Math.floor(alvo.vida / 2);
             alvo.receberDanoDireto(dano);
-            this.alvosAfetados.add(alvo.nome);
+            LivroDeFeiticosProibidos.alvosAfetados.add(alvo.nome);
             
             return `${usuario.nome} usou Livro de Feitiços Proibidos! ${alvo.nome} perdeu metade do HP (${dano})!`;
         }
         return `${usuario.nome} usou Livro de Feitiços Proibidos, mas não havia alvo!`;
+    }
+    
+    static resetar(): void {
+        LivroDeFeiticosProibidos.alvosAfetados.clear();
     }
 }
 
@@ -87,7 +74,8 @@ export class CoroaDeEspinhos implements IItem {
 
     usar(usuario: Personagem, alvo?: Personagem): string {
         if (alvo) {
-            alvo.adicionarEfeitoPersistente(new EfeitoCoroaEspinhos(3));
+            // Usa o sistema de Coroa de Espinhos já implementado no Personagem
+            alvo.setCoroaEspinhos(true);
             return `${usuario.nome} colocou Coroa de Espinhos em ${alvo.nome}! Perderá 5 HP por ataque base.`;
         }
         return `${usuario.nome} usou Coroa de Espinhos, mas não havia alvo!`;

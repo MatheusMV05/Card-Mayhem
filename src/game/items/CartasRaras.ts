@@ -1,6 +1,7 @@
 import { IItem } from '../interfaces';
 import { Raridade } from '../enums';
 import { Personagem } from '../entities/Personagem';
+import { CardFactory } from './CardFactory';
 
 /**
  * Elixir de Ferro - Imunidade a ataques base por 1 turno
@@ -51,17 +52,59 @@ export class MantoDeSombras implements IItem {
 }
 
 /**
- * Orbe de Cristal - Permite trocar uma das cartas do inventário agora
+ * Orbe de Cristal - Troca a pior carta do inventário por uma nova aleatória
  */
 export class OrbeDeCristal implements IItem {
     nome = 'Orbe de Cristal';
-    descricao = 'Permite trocar uma das cartas do inventário agora.';
+    descricao = 'Troca sua pior carta por uma nova aleatória.';
     raridade = Raridade.Raro;
     isMayhem = false;
 
     usar(usuario: Personagem): string {
-        // Efeito implementado na lógica de batalha
-        return `${usuario.nome} usou Orbe de Cristal! Uma carta do inventário pode ser trocada.`;
+        const inventario = usuario.inventario;
+        if (inventario.length === 0) {
+            return `${usuario.nome} usou Orbe de Cristal, mas não tinha cartas para trocar!`;
+        }
+        
+        // Encontra a carta de menor raridade para trocar
+        const ordemRaridade: Record<string, number> = {
+            'Comum': 1,
+            'Incomum': 2,
+            'Raro': 3,
+            'Épico': 4,
+            'Lendário': 5,
+            'Mayhem': 6,
+            'Super Mayhem': 7
+        };
+        
+        let piorIndice = 0;
+        let piorValor = 999;
+        
+        for (let i = 0; i < inventario.length; i++) {
+            const valor = ordemRaridade[inventario[i].raridade] || 1;
+            if (valor < piorValor) {
+                piorValor = valor;
+                piorIndice = i;
+            }
+        }
+        
+        const cartaRemovida = inventario[piorIndice];
+        
+        // Remover e adicionar nova carta
+        usuario.limparInventario();
+        for (let i = 0; i < inventario.length; i++) {
+            if (i === piorIndice) {
+                try {
+                    usuario.adicionarItem(CardFactory.criarCartaAleatoria());
+                } catch { /* */ }
+            } else {
+                try {
+                    usuario.adicionarItem(inventario[i]);
+                } catch { /* */ }
+            }
+        }
+        
+        return `${usuario.nome} usou Orbe de Cristal! Trocou ${cartaRemovida.nome} por uma nova carta!`;
     }
 }
 
@@ -85,16 +128,16 @@ export class EssenciaDeSangue implements IItem {
 }
 
 /**
- * Escudo Espinhoso - Devolve 30% do dano recebido no turno
+ * Escudo Espinhoso - Ativa espinhos que causam 5 de dano quando atacado
  */
 export class EscudoEspinhoso implements IItem {
     nome = 'Escudo Espinhoso';
-    descricao = 'Devolve 30% do dano recebido no turno.';
+    descricao = 'Ativa espinhos que causam 5 de dano ao atacante.';
     raridade = Raridade.Raro;
     isMayhem = false;
 
     usar(usuario: Personagem): string {
         usuario.setCoroaEspinhos(true);
-        return `${usuario.nome} ativou Escudo Espinhoso! Devolverá 30% do dano recebido.`;
+        return `${usuario.nome} ativou Escudo Espinhoso! Causará 5 de dano a quem atacá-lo.`;
     }
 }

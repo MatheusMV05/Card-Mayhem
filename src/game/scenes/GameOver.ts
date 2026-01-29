@@ -47,6 +47,17 @@ export class GameOver extends Scene {
     }
 
     create(): void {
+        // Parar qualquer música anterior e tocar música apropriada
+        this.sound.stopAll();
+        
+        if (this.gameOverData.jogadorVenceu) {
+            const victoryMusic = this.sound.add('victory-theme', { loop: false, volume: 0.6 });
+            victoryMusic.play();
+        } else {
+            const gameoverMusic = this.sound.add('gameover-theme', { loop: false, volume: 0.6 });
+            gameoverMusic.play();
+        }
+
         // Fundo temático
         this.createBackground();
 

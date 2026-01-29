@@ -50,7 +50,7 @@ export abstract class Personagem {
     protected static readonly MAX_INVENTARIO = 4;
     
     // Recuperação de mana por turno
-    protected static readonly MANA_RECUPERACAO = 40;
+    protected static readonly MANA_RECUPERACAO = 15;
 
     constructor(
         nome: string,
@@ -169,12 +169,12 @@ export abstract class Personagem {
             throw new PersonagemMortoError(alvo.nome);
         }
 
-        // Verificar se o próximo ataque falha
-        if (alvo._proximoAtaqueFalha) {
-            alvo._proximoAtaqueFalha = false;
+        // Verificar se o ATACANTE tem seu ataque marcado para falhar (Cajado Quebrado)
+        if (this._proximoAtaqueFalha) {
+            this._proximoAtaqueFalha = false;
             return {
                 dano: 0,
-                mensagem: `${this.nome} atacou, mas o ataque falhou!`,
+                mensagem: `${this.nome} tentou atacar, mas o ataque falhou pelo efeito do Cajado Quebrado!`,
                 bloqueado: true
             };
         }

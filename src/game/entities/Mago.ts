@@ -10,7 +10,7 @@ import { PersonagemMortoError, ManaInsuficienteError } from '../errors';
  * Ataque Base: 18 (usado para cálculo da Bola de Fogo)
  */
 export class Mago extends Personagem {
-    private static readonly CUSTO_BOLA_FOGO = 30;
+    private static readonly CUSTO_BOLA_FOGO = 45;
     private static readonly RECUPERACAO_MEDITAR = 25;
 
     constructor(nome: string) {
@@ -37,7 +37,7 @@ export class Mago extends Personagem {
     }
 
     get descricaoAtaque2(): string {
-        return `Custa ${Mago.CUSTO_BOLA_FOGO} de mana. Causa dano triplo (54).`;
+        return `Custa ${Mago.CUSTO_BOLA_FOGO} de mana. Causa dano triplo (27).`;
     }
 
     get custoManaAtaque2(): number {
@@ -76,7 +76,7 @@ export class Mago extends Personagem {
         }
 
         this.consumirMana(Mago.CUSTO_BOLA_FOGO);
-        const dano = this.ataque * 3; // 54 de dano
+        const dano = this.ataque * 1.5; // 27 de dano
 
         alvo.receberDano(dano);
 

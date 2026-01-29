@@ -1,8 +1,7 @@
 /**
  * Card Mayhem - RPG Arena Battle
- * Arquivo de demonstração do sistema de batalha
  * 
- * Este arquivo demonstra:
+ * Requsitos que este arquivo demonstra:
  * 1. Criação de personagens de diferentes classes
  * 2. Adição de itens aos personagens
  * 3. Criação da Arena e adição de lutadores

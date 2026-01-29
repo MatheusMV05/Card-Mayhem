@@ -25,12 +25,18 @@ const SCREEN = {
  */
 export class MainMenu extends Scene {
     private titleText!: GameObjects.Text;
+    private menuMusic!: Phaser.Sound.BaseSound;
 
     constructor() {
         super('MainMenu');
     }
 
     create() {
+        // Parar qualquer música anterior e tocar música do menu
+        this.sound.stopAll();
+        this.menuMusic = this.sound.add('menu-theme', { loop: true, volume: 0.5 });
+        this.menuMusic.play();
+
         // Fundo
         this.createBackground();
 

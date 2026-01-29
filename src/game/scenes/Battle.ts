@@ -82,6 +82,7 @@ export class Battle extends Scene {
     private isPlayerTurn: boolean = true;
     private isAnimating: boolean = false;
     private actionBlocked: boolean = false;
+    private battleMusic!: Phaser.Sound.BaseSound;
 
     constructor() {
         super('Battle');
@@ -106,6 +107,20 @@ export class Battle extends Scene {
     }
 
     create(): void {
+        // Parar qualquer música anterior
+        this.sound.stopAll();
+
+        // Tocar intro da batalha e depois o loop
+        const battleIntro = this.sound.add('battle-intro', { volume: 0.5 });
+        this.battleMusic = this.sound.add('battle-loop', { loop: true, volume: 0.5 });
+        
+        battleIntro.play();
+        battleIntro.once('complete', () => {
+            if (this.arena?.batalhaAtiva) {
+                this.battleMusic.play();
+            }
+        });
+
         // Reset personagens para nova partida
         this.jogador.resetar();
         this.oponente.resetar();
@@ -584,6 +599,21 @@ export class Battle extends Scene {
         this.attackButtons.forEach(btn => btn.destroy());
         this.attackButtons = [];
 
+        // Verificar se o jogador pode atacar (ex: Capa de Invisibilidade)
+        const canAttack = this.jogador.podeAtacar();
+
+        if (!canAttack) {
+            // Mostrar mensagem de ataques bloqueados
+            const blockedBtn = this.createBlockedAttackButton(
+                220, 200,
+                '⚔️ ATAQUES BLOQUEADOS',
+                'Use cartas para agir neste turno'
+            );
+            this.actionContainer.add(blockedBtn);
+            this.attackButtons.push(blockedBtn);
+            return;
+        }
+
         // Ataque 1
         const atk1Btn = this.createActionButton(
             220, 150, 
@@ -607,6 +637,43 @@ export class Battle extends Scene {
         );
         this.actionContainer.add(atk2Btn);
         this.attackButtons.push(atk2Btn);
+    }
+
+    private createBlockedAttackButton(
+        x: number,
+        y: number,
+        title: string,
+        description: string
+    ): GameObjects.Container {
+        const container = this.add.container(x, y);
+        const width = 380;
+        const height = 100;
+
+        const bg = this.add.graphics();
+        bg.fillStyle(0x2a2a2a, 1);
+        bg.fillRoundedRect(-width/2, -height/2, width, height, 12);
+        bg.lineStyle(4, 0x666666, 1);
+        bg.strokeRoundedRect(-width/2, -height/2, width, height, 12);
+
+        const titleText = this.add.text(0, -15, title, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '22px',
+            color: '#ff6666',
+            fontStyle: 'bold',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        const descText = this.add.text(0, 20, description, {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '14px',
+            color: '#888888',
+            align: 'center'
+        }).setOrigin(0.5);
+
+        container.add([bg, titleText, descText]);
+        return container;
     }
 
     private createActionButton(
@@ -932,6 +999,12 @@ export class Battle extends Scene {
     }
 
     private showMayhemEffect(cardName: string, callback: () => void): void {
+        // Efeito especial para Exodia
+        if (cardName === 'Exodia') {
+            this.showExodiaEffect(callback);
+            return;
+        }
+
         // Overlay vermelho pulsante
         const overlay = this.add.graphics();
         overlay.fillStyle(0xff0000, 0.4);
@@ -993,6 +1066,74 @@ export class Battle extends Scene {
         });
     }
 
+    private showExodiaEffect(callback: () => void): void {
+        // Parar música de batalha e tocar tema Exodia
+        this.sound.stopAll();
+        const exodiaTheme = this.sound.add('exodia-theme', { volume: 0.8 });
+        exodiaTheme.play();
+
+        // Overlay dourado brilhante
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0xffd700, 0.6);
+        overlay.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
+
+        // Flash branco
+        this.cameras.main.flash(1000, 255, 255, 255);
+        this.cameras.main.shake(1000, 0.03);
+
+        // Texto EXODIA épico
+        const exodiaText = this.add.text(SCREEN.CENTER_X, SCREEN.CENTER_Y - 150, '⭐ EXODIA ⭐', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '120px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#ffd700',
+            strokeThickness: 15
+        }).setOrigin(0.5).setAlpha(0);
+
+        const subText = this.add.text(SCREEN.CENTER_X, SCREEN.CENTER_Y + 50, 'VITÓRIA INSTANTÂNEA!', {
+            fontFamily: 'EightBitDragon, Georgia, serif',
+            fontSize: '60px',
+            color: '#ffd700',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 8
+        }).setOrigin(0.5).setAlpha(0);
+
+        // Animação de entrada
+        this.tweens.add({
+            targets: [exodiaText, subText],
+            alpha: 1,
+            scale: { from: 0.5, to: 1 },
+            duration: 1000,
+            ease: 'Back.easeOut'
+        });
+
+        // Efeito de brilho pulsante
+        this.tweens.add({
+            targets: exodiaText,
+            scale: 1.1,
+            duration: 500,
+            yoyo: true,
+            repeat: 5
+        });
+
+        // Executar callback após 5 segundos
+        this.time.delayedCall(5000, () => {
+            this.tweens.add({
+                targets: [overlay, exodiaText, subText],
+                alpha: 0,
+                duration: 500,
+                onComplete: () => {
+                    overlay.destroy();
+                    exodiaText.destroy();
+                    subText.destroy();
+                    callback();
+                }
+            });
+        });
+    }
+
     private cpuTurn(): void {
         if (!this.arena.batalhaAtiva) return;
 
@@ -1000,7 +1141,11 @@ export class Battle extends Scene {
         this.addLog('💀 CPU está pensando...');
 
         this.time.delayedCall(TIMING.CPU_THINK_DELAY, () => {
-            const useCard = Math.random() < 0.25 && this.oponente.inventario.length > 0;
+            const canAttack = this.oponente.podeAtacar();
+            const hasCards = this.oponente.inventario.length > 0;
+            
+            // Se não pode atacar, priorizar usar cartas
+            const useCard = !canAttack ? hasCards : (Math.random() < 0.25 && hasCards);
             let actionType: 'dano' | 'buff' | 'cura' | 'neutro' = 'dano';
             let cardUsed: IItem | null = null;
 
@@ -1013,16 +1158,22 @@ export class Battle extends Scene {
                     this.addLog(`💀 [CPU] ${result.mensagem}`);
                     actionType = result.tipo;
                 } catch {
-                    try {
-                        const result = this.arena.executarAtaque(1);
-                        this.addLog(`💀 [CPU] ${result.mensagem}`);
-                        actionType = result.tipo;
-                    } catch {
-                        this.addLog(`💀 [CPU] não conseguiu agir!`);
+                    if (canAttack) {
+                        try {
+                            const result = this.arena.executarAtaque(1);
+                            this.addLog(`💀 [CPU] ${result.mensagem}`);
+                            actionType = result.tipo;
+                        } catch {
+                            this.addLog(`💀 [CPU] não conseguiu agir!`);
+                            actionType = 'neutro';
+                        }
+                    } else {
+                        // Não pode atacar e carta falhou - turno perdido
+                        this.addLog(`💀 [CPU] está impedido de agir!`);
                         actionType = 'neutro';
                     }
                 }
-            } else {
+            } else if (canAttack) {
                 const attackNum = Math.random() < 0.5 ? 1 : 2;
                 try {
                     const result = this.arena.executarAtaque(attackNum as 1 | 2);
@@ -1038,6 +1189,10 @@ export class Battle extends Scene {
                         actionType = 'neutro';
                     }
                 }
+            } else {
+                // Não pode atacar e não tem cartas
+                this.addLog(`💀 [CPU] está impedido de atacar!`);
+                actionType = 'neutro';
             }
 
             this.updateStatusBars();

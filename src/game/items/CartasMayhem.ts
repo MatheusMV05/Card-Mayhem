@@ -51,28 +51,28 @@ export class BuracoNegro implements IItem {
 }
 
 /**
- * Desejo Supremo - Escolha: Ganhe 50 de HP ou cause 40 de dano direto
+ * Desejo Supremo - Escolhe automaticamente: Ganha 50 HP se vida < 50%, senão causa 40 de dano
  */
 export class DesejoSupremo implements IItem {
     nome = 'Desejo Supremo';
-    descricao = 'Escolha: Ganhe 50 de HP ou cause 40 de dano direto.';
+    descricao = 'Ganha 50 HP se vida baixa, senão causa 40 de dano direto.';
     raridade = Raridade.Mayhem;
     isMayhem = true;
-    private escolhaCura: boolean = true; // Default para cura, UI deve permitir escolha
-
-    setEscolha(cura: boolean): void {
-        this.escolhaCura = cura;
-    }
 
     usar(usuario: Personagem, alvo?: Personagem): string {
-        if (this.escolhaCura) {
+        // Escolhe automaticamente baseado na situação
+        const vidaBaixa = usuario.vida < (usuario.vidaMaxima * 0.5);
+        
+        if (vidaBaixa) {
             usuario.curar(50);
             return `MAYHEM! Desejo Supremo! ${usuario.nome} desejou saúde e ganhou 50 HP!`;
         } else if (alvo) {
             alvo.receberDanoDireto(40);
             return `MAYHEM! Desejo Supremo! ${usuario.nome} desejou destruição! ${alvo.nome} sofreu 40 de dano!`;
         }
-        return `MAYHEM! Desejo Supremo! ${usuario.nome} fez um desejo!`;
+        // Fallback para cura se não houver alvo
+        usuario.curar(50);
+        return `MAYHEM! Desejo Supremo! ${usuario.nome} desejou saúde e ganhou 50 HP!`;
     }
 }
 

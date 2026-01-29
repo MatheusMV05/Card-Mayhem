@@ -6,10 +6,9 @@ import { Preloader } from './scenes/Preloader';
 import { CharacterSelect } from './scenes/CharacterSelect';
 import { Battle } from './scenes/Battle';
 
-/**
- * Configuração do jogo Card Mayhem
- * RPG Arena Battle com sistema de cartas
- */
+// Configuração do jogo
+
+
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
     width: 1920,
@@ -18,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
     backgroundColor: '#1a1a2e',
     pixelArt: true,          // Renderização crisp para pixel art (sem blur)
     roundPixels: true,       // Arredonda pixels para evitar artefatos
-    antialias: false,        // Desativa antialiasing
+    antialias: false,       
     scale: {
         mode: Phaser.Scale.FIT,           // Mantém proporção e ajusta ao container
         autoCenter: Phaser.Scale.CENTER_BOTH,

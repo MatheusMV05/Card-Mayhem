@@ -313,8 +313,6 @@ export class Arena {
      * Processa efeitos especiais de cartas Mayhem após uso
      */
     private processarEfeitosMayhem(carta: IItem): void {
-        if (!carta.isMayhem) return;
-        
         // Moeda do Apocalipse - inverter turno baseado no resultado
         if (carta.nome === 'Moeda do Apocalipse' && MoedaDoApocalipse.ultimoResultado) {
             const resultado = MoedaDoApocalipse.ultimoResultado;
@@ -331,6 +329,19 @@ export class Arena {
         if (carta.nome === 'Inversão Temporal' && InversaoTemporal.foiUsada) {
             this.inverterTempo(3);
             InversaoTemporal.foiUsada = false;
+        }
+        
+        // Ankh da Reencarnação - adicionar 3 cartas épicas
+        if (carta.nome === 'Ankh da Reencarnação') {
+            const usuario = this.jogadorAtual!;
+            const cartasEpicas = CardFactory.criarCartasEpicas(3);
+            for (const c of cartasEpicas) {
+                try {
+                    usuario.adicionarItem(c);
+                } catch {
+                    break; // Inventário cheio
+                }
+            }
         }
         
         // Pedra Filosofal - transformar carta comum em Mayhem
